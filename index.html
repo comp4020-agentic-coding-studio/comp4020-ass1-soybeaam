@@ -3,22 +3,125 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>Scroll showcase — COMP4020 prototype</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header>
       <nav aria-label="Primary">
-        <a href="./">Home</a>
+        <a href="#hero">Home</a>
+        <a href="#intro">Intro</a>
+        <a href="#features">Features</a>
+        <a href="#showcase">Showcase</a>
+        <a href="#process">Process</a>
+        <a href="#cta">Get Started</a>
       </nav>
     </header>
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
-      </p>
+      <section id="hero" data-stagger="120">
+        <h1 data-animation="fade-up">Natural phenomenon of volcanic eruptions</h1>
+        <p data-animation="fade-up">
+          Volcanic eruptions are geological fury made visible—moments when Earth's internal heat and pressure erupt at the surface in devastating, magnificent force. Molten rock cascades across landscapes, ash plumes billow into the stratosphere, and in minutes entire regions are transformed. These events reveal the raw power beneath our world, both awe-inspiring and undeniably dangerous.
+        </p>
+        <a class="cta-button" href="#cta" data-animation="fade-up">Discover more</a>
+        <div class="hero-visual" data-animation="scale">
+          <video autoplay muted loop playsinline poster="./assets/volcano.jpg" aria-hidden="true">
+            <source src="./assets/152085-802335503_medium.mp4" type="video/mp4">
+          </video>
+        </div>
+      </section>
+
+      <section id="intro">
+        <p class="statement" data-animation="text-reveal">
+          The future of web experiences lies in thoughtful, purposeful interactions that guide users
+          through content naturally and intuitively.
+        </p>
+        <div class="intro-media" data-animation="image-reveal" role="img" aria-label="Placeholder image illustrating design concept"></div>
+      </section>
+
+      <section id="features">
+        <h2>Key Features</h2>
+        <div class="feature-grid" data-stagger="100">
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Smooth Animations</h3>
+            <p>
+              Carefully orchestrated reveal effects that guide user attention and enhance
+              engagement as they scroll through your content.
+            </p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Responsive Design</h3>
+            <p>
+              Built to adapt beautifully across all device sizes, from desktop to mobile,
+              ensuring a consistent experience everywhere.
+            </p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Performance First</h3>
+            <p>
+              Optimized for speed and efficiency, with minimal overhead and maximum impact.
+              Fast load times and smooth scrolling on every device.
+            </p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Accessible Content</h3>
+            <p>
+              Thoughtfully designed with accessibility in mind, ensuring your content reaches
+              and serves all visitors regardless of their abilities.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="showcase">
+        <h2>Showcase</h2>
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element one"></div>
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element two"></div>
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element three"></div>
+      </section>
+
+      <section id="process">
+        <h2>Anatomy of an Eruption</h2>
+        <ol class="timeline" data-stagger="100">
+          <li class="timeline-item" data-animation="fade-up">
+            <h3>Magma Buildup</h3>
+            <p>
+              Deep beneath the surface, molten rock accumulates in magma chambers, pressure and heat building relentlessly. Seismic tremors ripple across the region and the ground begins to swell—the volcano awakens.
+            </p>
+          </li>
+          <li class="timeline-item" data-animation="fade-up">
+            <h3>Precursor Signs</h3>
+            <p>
+              Earthquake swarms accelerate while gases like sulfur dioxide surge from vents and cracks. These unmistakable signals confirm that magma is rising, pushing toward the surface with unstoppable force.
+            </p>
+          </li>
+          <li class="timeline-item" data-animation="fade-up">
+            <h3>Eruption Onset</h3>
+            <p>
+              The mounting pressure finally shatters the rock above, and molten material explosively breaks through to the surface. Lava cascades across the landscape, ash plumes billow skyward, and entire regions are engulfed in devastating force.
+            </p>
+          </li>
+          <li class="timeline-item" data-animation="fade-up">
+            <h3>Cooling & Aftermath</h3>
+            <p>
+              The flows spread and gradually cool into new rock formations across the changed landscape. Ash settles across entire regions, and over time—slowly, inexorably—life returns and the land begins to heal.
+            </p>
+          </li>
+        </ol>
+        <div class="timeline-line" aria-hidden="true"><div class="timeline-line-fill"></div></div>
+      </section>
+
+      <section id="cta">
+        <h2 data-animation="fade-up">Ready to Begin?</h2>
+        <p data-animation="fade-up">
+          Transform your ideas into compelling digital experiences. Let's create something remarkable together.
+        </p>
+        <a class="cta-button" href="#hero" data-animation="fade-up">Back to top</a>
+      </section>
     </main>
+    <footer>
+      <p>&copy; 2026 COMP4020 prototype. All rights reserved.</p>
+    </footer>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
