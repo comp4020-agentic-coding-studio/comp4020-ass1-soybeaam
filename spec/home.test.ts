@@ -10,7 +10,7 @@ import { ANIMATIONS } from "../reveal-engine";
 // what's specific to this page's six-section scroll-reveal structure.
 const doc = new JSDOM(readFileSync(resolve("dist/index.html"), "utf8")).window.document;
 
-const SECTION_IDS = ["hero", "intro", "features", "showcase", "process", "cta"];
+const SECTION_IDS = ["hero", "volcano-scene", "intro", "features", "showcase", "process", "cta"];
 
 describe("home page sections", () => {
   for (const id of SECTION_IDS) {

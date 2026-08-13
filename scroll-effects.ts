@@ -15,7 +15,7 @@ function clamp(value: number, min: number, max: number): number {
  * stops slightly late, rather than at the exact edge), and stops the loop
  * the moment it isn't. Returns a teardown function.
  */
-function gatedRaf(el: Element, onFrame: () => void): () => void {
+export function gatedRaf(el: Element, onFrame: () => void): () => void {
   let rafId: number | null = null;
 
   function loop(): void {

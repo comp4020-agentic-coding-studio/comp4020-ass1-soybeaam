@@ -68,9 +68,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* No overflow clipping here (any value but visible on either axis, even
+   overflow-x alone, makes main a scroll container and silently breaks
+   position: sticky for descendants — confirmed against #volcano-scene's
+   sticky h2/.volcano-canvas). Nothing currently in the page overflows main's
+   box (checked scrollWidth === clientWidth at both marking viewports); if a
+   future section needs horizontal clipping (e.g. a fade-left/fade-right
+   reveal near the edge), scope overflow-x: hidden to that section instead
+   of reintroducing it here. */
 main {
   display: block;
-  overflow: hidden;
 }
 
 a {
@@ -572,6 +579,54 @@ main > section h2 {
   #hero .hero-visual video {
     object-position: 62% 35%;
   }
+}
+
+/* ------------------------------------------------------------
+   Volcano scene (ID-scoped layout)
+   ------------------------------------------------------------ */
+
+/* Tall scroll track for the Three.js scrubbed camera/rotation — the extra
+   height (beyond the pinned viewport itself) is what the scroll interaction
+   scrubs against, not visible content. Padding is zeroed here (unlike the
+   shared main > section rhythm) so .volcano-canvas and the sticky h2 can
+   size themselves against the section edges directly. */
+#volcano-scene {
+  position: relative;
+  height: 300vh;
+  padding: 0;
+}
+
+/* Stays readable for the whole pinned duration by sticking itself, rather
+   than scrolling past in the first viewport of the 300vh track like normal
+   flow content would. z-index keeps it above the canvas that sticks below
+   it in DOM order; --header-h keeps it clear of the sticky header above. */
+#volcano-scene h2 {
+  position: sticky;
+  top: calc(var(--header-h) + 1.5rem);
+  z-index: 2;
+  padding-inline: var(--section-pad-x);
+  margin: 0;
+  text-shadow: 0 0.25rem 1rem rgb(0 0 0 / 70%);
+}
+
+/* Pinned across the full viewport while the section's extra height scrolls
+   past underneath — the standard scroll-pin-and-scrub layout. Background is
+   the fallback visible before/while the Three.js script mounts its canvas
+   and the GLTF model loads into it. */
+.volcano-canvas {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.volcano-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* ------------------------------------------------------------
