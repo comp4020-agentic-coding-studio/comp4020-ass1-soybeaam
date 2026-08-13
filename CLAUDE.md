@@ -153,6 +153,20 @@ means building legibly is part of building well.
 You don't need a name, a student number, or any identity file in the repo: we
 know whose repo it is. Spend the effort on the work.
 
+## Subagents
+
+`.claude/agents/` splits the work by scope: `html-writer` (markup only),
+`css-stylist` (raw CSS only), `style-refactorer` (pure id/class rename-and-dedupe,
+no new styling or behavior), `interaction-engineer` (scroll/interactivity `.ts`,
+escalates to a stronger model for hard timing problems), `three-d-engineer`
+(Three.js/3D geometry, asks before non-trivial design calls), and `researcher`
+(web research only — never edits site source).
+
+`researcher` keeps its findings in `RESEARCH.md` at the repo root instead of
+each agent re-fetching the same pages: check there (or delegate to
+`researcher`) before spending a web search on something that might already be
+answered.
+
 ## This file is yours
 
 This CLAUDE.md is a starting point, not a fixed rulebook. As you learn what your
