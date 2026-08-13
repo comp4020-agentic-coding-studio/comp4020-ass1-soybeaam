@@ -28,11 +28,28 @@
   /* Type */
   --font-display: georgia, "Iowan Old Style", "Palatino Linotype", serif;
   --font-body: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
+
+  /* Sticky header's own rendered height, so #hero can size itself to
+     fill exactly the rest of the first viewport rather than double-
+     counting 100svh on top of the header's flow height. The nav wraps
+     to two rows below ~600px, so this is a two-row height by default
+     (mobile) and overridden to one row once it fits (see @media below);
+     measured against actual rendered header rects at both 1920×1080
+     and 390×844 (nav padding 2rem + row(s) of 1.36rem line-height +
+     0.5rem link padding + 1px border, doubled with a 0.5rem row-gap
+     when wrapped). */
+  --header-h: calc(2rem + 2 * (1.36rem + 0.5rem) + 0.5rem + 1px);
 }
 
 @media (width <= 480px) {
   :root {
     --reveal-distance: 1.25rem;
+  }
+}
+
+@media (width >= 640px) {
+  :root {
+    --header-h: calc(2rem + 1.36rem + 0.5rem + 1px);
   }
 }
 
@@ -454,7 +471,7 @@ main > section h2 {
   flex-direction: column;
   justify-content: flex-end;
   gap: 1.25rem;
-  min-height: 100svh;
+  min-height: calc(100svh - var(--header-h));
   padding-block: clamp(6rem, 12vh, 9rem) clamp(3.5rem, 9vh, 6rem);
   text-align: left;
   color: var(--color-text);
@@ -542,7 +559,8 @@ main > section h2 {
   overflow: hidden;
 }
 
-#hero .hero-visual img {
+#hero .hero-visual img,
+#hero .hero-visual video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -550,7 +568,8 @@ main > section h2 {
 }
 
 @media (width >= 1024px) {
-  #hero .hero-visual img {
+  #hero .hero-visual img,
+  #hero .hero-visual video {
     object-position: 62% 35%;
   }
 }
