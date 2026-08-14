@@ -5,11 +5,21 @@
 // full-viewport while the section's extra height scrolls past underneath it.
 // That extra height is the scrub track: scroll position through the section is
 // normalised to a 0→1 `progress`, and both the model's Y rotation and the
-// camera's distance from the model are computed *fresh from that progress
-// every frame* rather than accumulated per frame. That's the difference
-// between scroll-interactive and scroll-triggered autoplay — scrolling back up
-// runs the rotation and the dolly exactly backwards, and a mid-section reload
-// or an anchor jump lands on the pose that scroll position implies.
+// camera's pose are computed *fresh from that progress every frame* rather
+// than accumulated per frame. That's the difference between
+// scroll-interactive and scroll-triggered autoplay — scrolling back up runs
+// the camera move exactly backwards, and a mid-section reload or an anchor
+// jump lands on the pose that scroll position implies.
+//
+// The camera travels a three-act path, each act a (elevation angle, distance)
+// keyframe interpolated with an eased blend (see `poseAt`): it opens close
+// and low on the crater rim, rises and pulls back into a bird's-eye
+// establishing shot of the whole cone, then dives back down near-vertical
+// into the crater's centre for the finale. Camera position is built from
+// spherical coordinates around the model's centre with a fixed azimuth (the
+// camera never leaves the Y–Z plane through that centre) — elevation moves it
+// through Y and Z simultaneously, exactly the two axes the shot needs; X stays
+// at 0 so the model's own rotation is what supplies lateral motion.
 //
 // The render loop is gated by the shared IntersectionObserver-driven
 // `gatedRaf` from scroll-effects.ts, so the GPU is idle whenever the section
@@ -26,22 +36,37 @@ const TURNS = 2;
 
 // Camera distance is expressed as a multiple of a computed "fit distance" —
 // the distance at which the model just fills the frame for the *current*
-// aspect ratio — rather than in absolute world units. Two reasons: the glTF
-// arrives with a baked-in ~0.008 scale (a 4040-unit Sketchfab export nested
-// inside two scaling parent nodes), and a distance that frames the cone at
-// 1920×1080 leaves it a postage stamp at 390×844. Fit-relative distances
-// hold the same framing at both.
-const START_DISTANCE = 1.0; // whole model in frame, nothing cropped
+// aspect ratio and elevation — rather than in absolute world units. Two
+// reasons: the glTF arrives with a baked-in ~0.008 scale (a 4040-unit
+// Sketchfab export nested inside two scaling parent nodes), and a distance
+// that frames the cone at 1920×1080 leaves it a postage stamp at 390×844.
+// Fit-relative distances hold the same framing at both.
+//
+// The path is three keyframes in (elevation angle, distance) space, blended
+// with an eased interpolation (`poseAt`):
+//   1. OPEN     — close and low on the rim, matching the section's opening
+//      shot: the crater fills the frame and the flat skirt of the terrain
+//      plate is mostly cropped out.
+//   2. AERIAL   — risen and pulled back into a wide bird's-eye establishing
+//      shot of the whole cone.
+//   3. CENTRE   — dived back down to near-vertical, in close on the crater's
+//      centre, for the finale.
+// Elevation is degrees above the horizontal plane through the model's centre;
+// 0° is dead-on, 90° is straight down (never reached — see `poseAt`).
+type PoseKeyframe = { progress: number; elevationDeg: number; distanceWide: number; distanceNarrow: number };
 
-// How far in the dolly pushes, as a fraction of the fit distance. A landscape
-// frame can take a hard push — at 0.42 the crater mouth fills a 16:9 frame and
-// still reads as a crater. A portrait frame can't: the same distance on a
-// 390-wide viewport showed nothing but a wall of rock, because the narrow
-// frame is already cropping hard before the dolly starts. So the end distance
-// eases back as the viewport gets narrower.
-const END_DISTANCE_WIDE = 0.42;
-const END_DISTANCE_NARROW = 0.62;
-const END_DISTANCE_ASPECT_RANGE = { narrow: 0.5, wide: 1.6 };
+// Landscape frames can take a harder push than portrait ones before they stop
+// reading as "a crater" — a 390-wide viewport at the same distance showed
+// nothing but a wall of rock, because the narrow frame is already cropping
+// hard before any dolly starts. So the tighter keyframes (OPEN, CENTRE) ease
+// back on distance as the viewport narrows; AERIAL is a wide enough shot that
+// the difference isn't worth carrying.
+const POSE_KEYFRAMES: PoseKeyframe[] = [
+  { progress: 0, elevationDeg: 28.87, distanceWide: 0.62, distanceNarrow: 0.75 }, // OPEN
+  { progress: 0.45, elevationDeg: 78, distanceWide: 1.7, distanceNarrow: 1.7 }, // AERIAL
+  { progress: 1, elevationDeg: 85, distanceWide: 0.16, distanceNarrow: 0.22 }, // CENTRE
+];
+const POSE_ASPECT_RANGE = { narrow: 0.5, wide: 1.6 };
 
 const FOV = 45;
 
@@ -53,16 +78,12 @@ const FOV = 45;
 // phones instead. The cone is the subject; its base plate isn't.
 const MIN_FIT_ASPECT = 1.0;
 
-/**
- * Direction from the model centre to the camera: dead-on in Z, lifted about
- * 29°. Lower (the first pass used ~19°) and the terrain plate collapses to a
- * thin band across the frame and you can't see into the crater; much higher
- * and it reads as a flat disc rather than a cone.
- */
-const VIEW_DIRECTION = new THREE.Vector3(0, 0.55, 1).normalize();
+/** Pose used for the single static frame under prefers-reduced-motion: the opening shot. */
+const REDUCED_MOTION_PROGRESS = 0;
 
-/** Pose used for the single static frame under prefers-reduced-motion. */
-const REDUCED_MOTION_PROGRESS = 0.3;
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -114,15 +135,15 @@ export function initVolcanoScene(): void {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const centre = new THREE.Vector3();
-  /** Model bounding-box corners, relative to `centre` (see `computeFit`). */
+  /** Model bounding-box corners, relative to `centre` (see `fitDistanceFor`). */
   let corners: THREE.Vector3[] = [];
-  let fitDistance = 1;
-  let endDistance = END_DISTANCE_WIDE;
   let model: THREE.Object3D | null = null;
 
   /**
-   * Distance along `VIEW_DIRECTION` at which the whole model just fits the
-   * frame, for the current aspect.
+   * Distance along `dir` at which the whole model just fits the frame, for
+   * the current aspect. Recomputed fresh per frame rather than cached,
+   * because `dir` itself now changes with scroll progress — cheap enough
+   * (eight corners) that this costs nothing measurable.
    *
    * Solved exactly against the bounding-box corners rather than estimated
    * from the box's width and height, because the subject is a wide flat
@@ -135,29 +156,26 @@ export function initVolcanoScene(): void {
    * `d - q·dir` with lateral offsets `q·right` and `q·up`, so each corner
    * implies a minimum `d`; the fit is the largest of them.
    */
-  function computeFit(): void {
-    if (corners.length === 0) return;
+  function fitDistanceFor(dir: THREE.Vector3): number {
+    if (corners.length === 0) return 1;
     const halfV = Math.tan((FOV * Math.PI) / 360);
     const halfH = halfV * Math.max(camera.aspect, MIN_FIT_ASPECT);
 
-    // Camera basis for a lookAt with world up: forward is -VIEW_DIRECTION.
-    const right = new THREE.Vector3().crossVectors(THREE.Object3D.DEFAULT_UP, VIEW_DIRECTION).normalize();
-    const up = new THREE.Vector3().crossVectors(VIEW_DIRECTION, right).normalize();
+    // Camera basis for a lookAt with world up: forward is -dir. Degenerates
+    // if dir is exactly vertical, which is why no keyframe reaches 90°.
+    const right = new THREE.Vector3().crossVectors(THREE.Object3D.DEFAULT_UP, dir).normalize();
+    const up = new THREE.Vector3().crossVectors(dir, right).normalize();
 
     let required = 0;
     for (const q of corners) {
-      const depth = q.dot(VIEW_DIRECTION);
+      const depth = q.dot(dir);
       required = Math.max(
         required,
         depth + Math.abs(q.dot(right)) / halfH,
         depth + Math.abs(q.dot(up)) / halfV,
       );
     }
-    fitDistance = required;
-
-    const { narrow, wide } = END_DISTANCE_ASPECT_RANGE;
-    const t = clamp((camera.aspect - narrow) / (wide - narrow), 0, 1);
-    endDistance = THREE.MathUtils.lerp(END_DISTANCE_NARROW, END_DISTANCE_WIDE, t);
+    return required;
   }
 
   /** Scroll fraction through the section's scrub track, 0→1. */
@@ -168,12 +186,39 @@ export function initVolcanoScene(): void {
     return clamp((0 - rect.top) / track, 0, 1);
   }
 
+  /**
+   * Blends `POSE_KEYFRAMES` at `progress` into an (elevation, distance
+   * multiplier) pair, easing each segment independently so the camera settles
+   * into and out of the AERIAL keyframe rather than passing through it at a
+   * constant rate.
+   */
+  function poseAt(progress: number): { elevationDeg: number; distance: number } {
+    const { narrow, wide } = POSE_ASPECT_RANGE;
+    const aspectT = clamp((camera.aspect - narrow) / (wide - narrow), 0, 1);
+
+    let i = 0;
+    while (i < POSE_KEYFRAMES.length - 2 && progress > POSE_KEYFRAMES[i + 1].progress) i++;
+    const a = POSE_KEYFRAMES[i];
+    const b = POSE_KEYFRAMES[i + 1];
+    const span = b.progress - a.progress;
+    const localT = smoothstep(span > 0 ? clamp((progress - a.progress) / span, 0, 1) : 1);
+
+    const aDistance = THREE.MathUtils.lerp(a.distanceNarrow, a.distanceWide, aspectT);
+    const bDistance = THREE.MathUtils.lerp(b.distanceNarrow, b.distanceWide, aspectT);
+    return {
+      elevationDeg: THREE.MathUtils.lerp(a.elevationDeg, b.elevationDeg, localT),
+      distance: THREE.MathUtils.lerp(aDistance, bDistance, localT),
+    };
+  }
+
   /** Applies a pose that is a pure function of `progress`. */
   function applyProgress(progress: number): void {
     if (!model) return;
     model.rotation.y = progress * Math.PI * 2 * TURNS;
-    const distance = THREE.MathUtils.lerp(START_DISTANCE, endDistance, progress) * fitDistance;
-    camera.position.copy(centre).addScaledVector(VIEW_DIRECTION, distance);
+    const { elevationDeg, distance } = poseAt(progress);
+    const rad = THREE.MathUtils.degToRad(elevationDeg);
+    const dir = new THREE.Vector3(0, Math.sin(rad), Math.cos(rad));
+    camera.position.copy(centre).addScaledVector(dir, distance * fitDistanceFor(dir));
     camera.lookAt(centre);
   }
 
@@ -181,7 +226,6 @@ export function initVolcanoScene(): void {
     const size = measure();
     camera.aspect = size.width / size.height;
     camera.updateProjectionMatrix();
-    computeFit();
     renderer.setSize(size.width, size.height);
     if (reducedMotion) {
       applyProgress(REDUCED_MOTION_PROGRESS);
@@ -204,7 +248,6 @@ export function initVolcanoScene(): void {
         [box.min, box.max].map((c) => new THREE.Vector3(a.x, b.y, c.z).sub(centre)),
       ),
     );
-    computeFit();
 
     camera.far = box.getBoundingSphere(new THREE.Sphere()).radius * 12;
     camera.updateProjectionMatrix();
