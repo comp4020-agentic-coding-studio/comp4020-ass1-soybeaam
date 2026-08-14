@@ -122,3 +122,80 @@ floating UI, rather than a full-bleed gradient scrim.
 - [Lama Lama Creative Agency Hero Design — unsection.com](https://www.unsection.com/section/lama-lama-creative-agency-hero-design)
 - [Hero screenshot (viewed directly)](https://unsection.b-cdn.net/Lama%20Lama%20Creative%20Agency%20Hero%20Design.webp)
 - [Lama Lama — Amsterdam based creative digital agency (live site, unreachable from this sandbox at time of research)](https://lamalama.com/)
+
+## Attribution for `src/volcano.glb` (Sketchfab volcano model)
+
+**Question:** What license is the "volcano" Sketchfab model
+(`src/volcano.glb`, used in the scroll-driven 3D volcano section) under, and
+what exact attribution text does that license require, since the site
+currently shows no attribution for it?
+
+**Findings:**
+
+The model page (https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751)
+lists:
+- **Title (exact, as displayed):** "volcano" (lowercase, no other qualifier
+  in the page heading).
+- **Author:** display name "gelmi.com.br", Sketchfab handle/profile
+  `@rodrigogelmi` → profile URL `https://sketchfab.com/rodrigogelmi`. The
+  profile itself only exposes a Facebook link (https://www.facebook.com/rgelmi)
+  as an external link, not a separate gelmi.com.br hyperlink — the author
+  appears to have simply set their Sketchfab display name to their domain
+  (gelmi.com.br), so that string is the name to display, but there is no
+  distinct "linked from profile" URL to gelmi.com.br to cite beyond the
+  domain-as-name itself.
+- **License:** "CC Attribution" (Sketchfab's label), i.e. **Creative Commons
+  Attribution 4.0 International (CC BY 4.0)**. Sketchfab's own "Learn more"
+  link on the model page points to
+  `http://creativecommons.org/licenses/by/4.0/` (canonical HTTPS form:
+  https://creativecommons.org/licenses/by/4.0/).
+
+CC BY 4.0 requires attribution containing, at minimum: title of the work,
+author name (with link if available), source/link to the work, and the
+license name with a link to it ("TASL" — Title, Author, Source, License).
+Sketchfab's own recommended attribution format for CC-licensed models
+follows exactly this pattern.
+
+**Recommended exact attribution line(s):**
+
+Plain text:
+> "volcano" by gelmi.com.br (https://sketchfab.com/rodrigogelmi) is licensed
+> under CC Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/).
+> Source: https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751
+
+As linked HTML (for the implementer to convert into markup, not written here
+since this agent doesn't edit site source):
+> "[volcano](https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751)"
+> by [gelmi.com.br](https://sketchfab.com/rodrigogelmi) is licensed under
+> [CC Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+**Tips / gotchas:**
+
+- License is **CC BY 4.0** (attribution required, no NonCommercial or
+  ShareAlike restriction per Sketchfab's page) — commercial use and
+  modification are permitted as long as attribution is given, so this repo
+  (course prototype, deployed publicly) is compliant provided the
+  attribution above appears somewhere reachable from the deployed page —
+  a visible credit line/footer near the volcano section, or a credits/about
+  page linked from the site, is the normal way to satisfy this; it doesn't
+  strictly have to sit inside the 3D canvas itself.
+- Use the canonical HTTPS license URL `https://creativecommons.org/licenses/by/4.0/`
+  even though Sketchfab's own in-page link is `http://` (no `s`) — the
+  content is identical, https is just the modern canonical form.
+- Sketchfab's display name for this author *is* "gelmi.com.br" (they named
+  their account after their domain) — there is no separate "author's real
+  name" distinct from that string to attribute to, and no confirmed direct
+  hyperlink from their profile to `gelmi.com.br` itself (only a Facebook
+  link was found on the profile at time of research) — so link the
+  author's name to their **Sketchfab profile** (`https://sketchfab.com/rodrigogelmi`),
+  not to a bare `gelmi.com.br` URL, since that domain link wasn't verified
+  as live/owned-by-them beyond being their display name.
+- This agent did not edit any HTML/CSS/TS — whichever agent adds the
+  attribution should place it as visible, non-decorative text (not just an
+  HTML comment), since CC BY requires attribution be reasonably discoverable
+  by a viewer of the work, not merely present in source.
+
+**Sources:**
+- [volcano — Sketchfab model page](https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751)
+- [rodrigogelmi (gelmi.com.br) — Sketchfab profile](https://sketchfab.com/rodrigogelmi)
+- [Creative Commons Attribution 4.0 International — canonical license text](https://creativecommons.org/licenses/by/4.0/)
