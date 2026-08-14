@@ -68,6 +68,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Thin white-line scrollbar, standard-track plus the WebKit equivalent
+   (Chrome, the browser this is marked in, doesn't support the standard
+   properties yet). */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 60%) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 60%);
+  border-radius: 3px;
+}
+
 /* No overflow clipping here (any value but visible on either axis, even
    overflow-x alone, makes main a scroll container and silently breaks
    position: sticky for descendants — confirmed against #volcano-scene's
@@ -467,22 +488,37 @@ main > section h2 {
    Hero (ID-scoped layout)
    ------------------------------------------------------------ */
 
-/* The eruption photo is the hero's full-bleed background (grid-area's
-   gone — .hero-visual is absolutely positioned to fill #hero, and the
-   text siblings stack in normal flow above it). Content is anchored to
-   the bottom of the frame rather than centred, per the design reference. */
+/* The eruption photo is the hero's full-bleed background (.hero-visual and
+   .hero-cursor-glass are absolutely positioned to fill #hero and sit outside
+   grid flow entirely). The text siblings are placed on a two-column grid —
+   headline + CTA in the primary (left) column, the abstract in its own
+   column to the right — via grid-area rather than new wrapper markup.
+   Content is anchored to the bottom of the frame rather than centred, per
+   the design reference; single column, headline-first, below 641px. */
 #hero {
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "headline"
+    "abstract"
+    "cta";
+  align-items: end;
+  align-content: end;
+  gap: 1.25rem clamp(2rem, 4vw, 4rem);
   min-height: calc(100svh - var(--header-h));
   padding-block: clamp(6rem, 12vh, 9rem) clamp(3.5rem, 9vh, 6rem);
   text-align: left;
   color: var(--color-text);
   background: var(--color-bg);
+}
+
+@media (width >= 641px) {
+  #hero {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas: "headline abstract" "cta abstract";
+  }
 }
 
 /* Small localized scrim behind the text block only — the photo itself
@@ -500,6 +536,7 @@ main > section h2 {
 #hero h1 {
   position: relative;
   z-index: 1;
+  grid-area: headline;
   max-width: 42rem;
   font-family: "Arial Black", "Helvetica Neue", impact, sans-serif;
   font-size: clamp(2.5rem, 8vw, 5rem);
@@ -523,18 +560,25 @@ main > section h2 {
   border-radius: 999px;
 }
 
+/* The abstract reads as secondary, supporting copy rather than competing
+   with the headline — muted opacity plus a smaller size than the previous
+   single-column treatment. */
 #hero p {
   position: relative;
   z-index: 1;
-  max-width: 28rem;
+  grid-area: abstract;
+  align-self: end;
+  max-width: 26rem;
   margin: 0;
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  font-size: clamp(0.9rem, 1.2vw, 1rem);
+  opacity: 0.7;
   color: var(--color-text);
 }
 
 #hero .cta-button {
   position: relative;
   z-index: 1;
+  grid-area: cta;
   align-self: flex-start;
   background: rgb(18 13 12 / 55%);
   backdrop-filter: blur(6px);
@@ -598,7 +642,7 @@ main > section h2 {
   background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 35%) 0%, rgb(255 236 220 / 16%) 45%, rgb(255 236 220 / 0%) 75%);
   border: 1px solid rgb(255 255 255 / 22%);
   box-shadow: inset 0 0 40px rgb(255 255 255 / 12%);
-  backdrop-filter: url("#hero-glass-distort") blur(4px) saturate(150%);
+  backdrop-filter: url("#hero-glass-distort") saturate(150%);
   opacity: 0;
   pointer-events: none;
   transform: translate(calc(var(--cursor-x, 0) * 1px - 50%), calc(var(--cursor-y, 0) * 1px - 50%)) scale(calc(1 + var(--cursor-speed, 0) * 0.18));
@@ -675,6 +719,86 @@ main > section h2 {
   height: 100%;
 }
 
+/* Sticky box sitting between the canvas (z-index 1) and the end-fade
+   (z-index 3) so captions read over the 3D render but still get washed
+   out by the fade at the handoff. Content anchors to the lower third so
+   it never collides with the sticky h2 pinned top-left. The three-d-
+   engineer's script writes --stage-0-opacity.. --stage-3-opacity onto
+   this element every scroll frame, one per .volcano-stage in DOM order. */
+.volcano-stage-captions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100svh;
+  margin-top: -100svh;
+  pointer-events: none;
+}
+
+/* All four stages fill the same lower-third/left-aligned spot and stack
+   directly on top of each other (position: absolute, not flow, with an
+   explicit inset rather than the parent's flex/padding — the parent is
+   itself the positioned containing block, so offsets live on the stages
+   and don't get doubled with any padding the parent might also carry)
+   so the crossfade is pure opacity with no layout shift between stages. */
+.volcano-stage {
+  position: absolute;
+  inset: auto auto clamp(3rem, 12vh, 6rem) var(--section-pad-x);
+  max-width: 32rem;
+  padding: 1.5rem 1.75rem;
+  background: rgb(18 13 12 / 85%);
+  border-radius: 1rem;
+  text-shadow: 0 0.25rem 1rem rgb(0 0 0 / 70%);
+}
+
+.volcano-stage:nth-child(1) {
+  opacity: var(--stage-0-opacity, 0);
+}
+
+.volcano-stage:nth-child(2) {
+  opacity: var(--stage-1-opacity, 0);
+}
+
+.volcano-stage:nth-child(3) {
+  opacity: var(--stage-2-opacity, 0);
+}
+
+.volcano-stage:nth-child(4) {
+  opacity: var(--stage-3-opacity, 0);
+}
+
+.volcano-stage-eyebrow {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-lava);
+}
+
+.volcano-stage h3 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  color: var(--color-text);
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- distinct
+   .volcano-stage vs #hero scoping means these never target the same element */
+.volcano-stage p {
+  margin: 0;
+  max-width: 30rem;
+  color: var(--color-text-muted);
+}
+
+@media (width <= 640px) {
+  .volcano-stage {
+    max-width: calc(100% - (var(--section-pad-x) * 2));
+    padding: 1.25rem 1.5rem;
+  }
+}
+
 /* Sits pinned above both the canvas and the h2 for the whole section so it
    can wash the scene to red then black right at the handoff to #intro. The
    fade itself is driven every frame by the three-d-engineer's script via the
@@ -686,6 +810,7 @@ main > section h2 {
   z-index: 3;
   width: 100%;
   height: 100svh;
+  margin-top: -200svh;
   background: transparent;
   pointer-events: none;
 }
@@ -803,4 +928,60 @@ footer {
   font-size: 0.85rem;
   color: var(--color-text-muted);
   background: var(--color-bg);
+}
+
+/* ------------------------------------------------------------
+   Back-to-top button (fixed, direct child of body)
+   ------------------------------------------------------------ */
+
+/* Circular icon button, not a pill — matches .cta-button's accent
+   gradient/hover convention but sized/shaped for a single glyph.
+   .is-visible is toggled by the interaction-engineer's scroll listener. */
+.back-to-top {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: var(--color-text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0.75rem 1.5rem -0.5rem rgb(255 77 28 / 35%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+}
+
+.back-to-top:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 1.25rem 2rem -0.5rem rgb(255 77 28 / 45%);
+  filter: brightness(1.05);
+}
+
+.back-to-top:active {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.back-to-top:focus-visible {
+  outline: 2px solid var(--color-lava);
+  outline-offset: 3px;
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top {
+    transition-duration: 1ms;
+  }
 }

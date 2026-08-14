@@ -219,14 +219,23 @@ const APRON_INNER = 0.78;
  *  beat the skirt's own noise (~±0.25) plus the apron's near-field relief. */
 const PLAIN_CLEARANCE = 1.2;
 /** Measured, not derived: under volcano-scene.ts's ambient-dominant rig a flat
- *  up-facing Lambert surface renders about 1.17× its own albedo. The far end of the
+ *  up-facing Lambert surface renders about 0.768× its own albedo. The far end of the
  *  apron has to *render* as the page's background colour — not merely be
  *  painted with it — or the ground stays visibly lighter than the page and the
  *  canvas itself starts reading as a rectangle. So the horizon albedo is
  *  pre-divided by this. Re-measure it if the lighting in volcano-scene.ts
  *  changes: sample the frame's far corners at progress 0 and compare with
- *  `--color-surface`. */
-const HORIZON_LIGHT_GAIN = 1.17;
+ *  `--color-surface`.
+ *
+ *  It was 1.17 under the old 1.6 ambient / 3.2 key rig, which measured out at
+ *  rgb(31, 22, 17) in the horizon band against a `--color-surface` of
+ *  rgb(30, 22, 19). That rig was trimmed by a uniform 0.656 to stop lit rock
+ *  overrunning its own albedo (see volcano-scene.ts), and because *both*
+ *  intensities were scaled by the same factor the up-facing gain scales by
+ *  exactly that factor too: 1.17 × 0.656 = 0.768, re-measured at rgb(31, 22, 17)
+ *  again afterwards. Under 1 the horizon albedo is now brighter than the
+ *  background it renders as, which is fine — it is nowhere near clipping. */
+const HORIZON_LIGHT_GAIN = 0.768;
 
 export type ApronOptions = {
   /** Albedo where the apron meets the bake, matched to the flank it emerges

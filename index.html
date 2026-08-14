@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scroll showcase — COMP4020 prototype</title>
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
   </head>
   <body>
     <svg aria-hidden="true" focusable="false" style="position: absolute; width: 0; height: 0; overflow: hidden">
@@ -47,7 +48,7 @@
       <section id="hero" data-stagger="120">
         <h1 data-animation="fade-up">Natural phenomenon of volcanic eruptions</h1>
         <p data-animation="fade-up">
-          Volcanic eruptions are geological fury made visible—moments when Earth's internal heat and pressure erupt at the surface in devastating, magnificent force. Molten rock cascades across landscapes, ash plumes billow into the stratosphere, and in minutes entire regions are transformed. These events reveal the raw power beneath our world, both awe-inspiring and undeniably dangerous.
+          Geological fury made visible: molten rock, ash, and pressure reshaping the surface in minutes.
         </p>
         <a class="cta-button" href="#cta" data-animation="fade-up">Discover more</a>
         <div class="hero-visual" data-animation="scale">
@@ -61,6 +62,28 @@
       <section id="volcano-scene">
         <h2>The Volcano Itself</h2>
         <div class="volcano-canvas" aria-hidden="true"></div>
+        <div class="volcano-stage-captions">
+          <div class="volcano-stage" data-stage="onset">
+            <span class="volcano-stage-eyebrow">01 — Eruption Onset</span>
+            <h3>You're looking at an eruption in progress</h3>
+            <p>Pressure finally shatters the rock above, and molten material breaks through to the surface.</p>
+          </div>
+          <div class="volcano-stage" data-stage="buildup">
+            <span class="volcano-stage-eyebrow">02 — Magma Buildup</span>
+            <h3>Long before this moment</h3>
+            <p>Deep below, molten rock had been gathering in a chamber for years, pressure and heat building relentlessly.</p>
+          </div>
+          <div class="volcano-stage" data-stage="precursor">
+            <span class="volcano-stage-eyebrow">03 — Precursor Signs</span>
+            <h3>In the days before it broke through</h3>
+            <p>Earthquake swarms accelerated and gases surged from vents — unmistakable signs that magma was rising.</p>
+          </div>
+          <div class="volcano-stage" data-stage="peak">
+            <span class="volcano-stage-eyebrow">04 — Peak Eruption</span>
+            <h3>Now, at full force</h3>
+            <p>Lava cascades across the slopes as ash billows skyward and the mountain reaches its most violent moment.</p>
+          </div>
+        </div>
         <div class="volcano-end-fade" aria-hidden="true"></div>
       </section>
 
@@ -157,5 +180,6 @@
       <p><a href="https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751">volcano</a> by <a href="https://sketchfab.com/rodrigogelmi">gelmi.com.br</a> is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC Attribution 4.0</a></p>
     </footer>
     <script type="module" src="./main.ts"></script>
+    <button type="button" class="back-to-top" aria-label="Back to top">↑</button>
   </body>
 </html>

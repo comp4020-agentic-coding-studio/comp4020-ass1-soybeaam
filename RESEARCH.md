@@ -199,3 +199,213 @@ since this agent doesn't edit site source):
 - [volcano — Sketchfab model page](https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751)
 - [rodrigogelmi (gelmi.com.br) — Sketchfab profile](https://sketchfab.com/rodrigogelmi)
 - [Creative Commons Attribution 4.0 International — canonical license text](https://creativecommons.org/licenses/by/4.0/)
+
+## Cursor-following effect on vertex3d.asia (for hero lens/ripple redesign)
+
+**Question:** What is the distortion character, cursor-tracking behaviour, and
+ripple behaviour of the cursor-following effect on https://www.vertex3d.asia/,
+so it can be used as the reference for reworking this repo's own hero
+cursor-lens effect (an SVG `feImage`/`feDisplacementMap` radial bulge applied
+via CSS `backdrop-filter`, currently minus its `blur()` term which another
+agent is removing)?
+
+**Important caveat up front — direct observation was not possible.**
+`https://www.vertex3d.asia/` returned **HTTP 403 Forbidden** on every WebFetch
+attempt (both `https://www.vertex3d.asia/` and `https://vertex3d.asia/`),
+consistent with Cloudflare-style bot protection blocking a headless
+fetcher — no raw HTML, inline `<script>`, or CSS could be pulled from the live
+page. The Wayback Machine (`web.archive.org`) is also unreachable from this
+tool ("Claude Code is unable to fetch from web.archive.org"). So **none of
+this entry is a direct code/DOM inspection** — everything below is either (a)
+third-party description of the site (Awwwards' own tagging of its featured
+interactions, which Awwwards writes editorially, not the site's own docs) or
+(b) inferred from general knowledge of how this genre of WebGL cursor-lens
+site is normally built. Each claim below is labelled which.
+
+**Findings:**
+
+*What's actually confirmed (from Awwwards, a third party, not vertex3d.asia
+itself):* Vertex3D is a WebGL/real-time-3D studio site by Yann Trevelot,
+Awwwards Honorable Mention, tagged with GSAP, WebGL, Webflow (CMS), and
+Three.js-adjacent "Spatial Web" language. Awwwards' own showcase page for the
+site lists several *separate* tagged interaction elements, not one single
+"the cursor effect" — this matters because the user's description (a
+full-hero radial lens that warps the video/background under the pointer)
+doesn't map cleanly onto exactly one of these named entries:
+- **"Magnetic Cursor to Glassmorphism UI Reveal"** — tagged `cursor`,
+  `micro-interaction`, `hover effect`, `gsap`, `ui design`, `glassmorphism`,
+  categorised under "Mouse Interaction." The name and tags read as a
+  *button/UI-element* hover pattern (cursor gets magnetically pulled toward a
+  target, which then reveals a frosted-glass panel) — i.e. GSAP-driven DOM/CSS
+  animation, not necessarily a full-viewport WebGL shader. This is Awwwards'
+  own title for the clip, not something scraped from the site's code.
+- **"WebGL Particle Physics & Fluid Shaders"** — also categorised under
+  "Mouse Interaction," separate entry, separate clip. This name is the closer
+  match to what the user is describing (a real distortion field reacting to
+  the cursor, over a fluid/particle-like visual) but Awwwards gives no prose
+  explaining its mechanics either — just the title and category tag.
+- **"Cinematic 3D Environment Transition with Lens Distortion"** — categorised
+  under "Transition," not "Mouse Interaction," so this is very likely a
+  scene/page-transition effect (camera cut with a lens-distortion wipe), not
+  a persistent cursor-follow effect, despite having "Lens Distortion" in its
+  name — worth not conflating with the hero cursor effect.
+
+Because Awwwards splits these into separate named/categorised entries rather
+than describing one unified "hero cursor lens," **it's not possible to say
+with confidence, from the sources reachable here, which single one (if any)
+corresponds to the specific effect the user wants to model** — most likely
+candidate is "WebGL Particle Physics & Fluid Shaders" given it's the one
+actually about a WebGL-driven field effect rather than a UI hover pattern, but
+this is a guess, not a confirmed match.
+
+*Distortion character, tracking, ripple — none of these three specific
+questions have a directly-sourced answer.* No description found (via
+Awwwards, general web search, or the site itself) states outright whether the
+effect is a magnifying bulge vs. chromatic aberration vs. pixel-sorting, nor
+whether the cursor tracking snaps/lags/springs, nor whether there's a
+click/movement-triggered ripple. This is reasoned/inferred below from how
+this class of effect ("WebGL cursor lens over a video/image hero," the same
+category this repo's own effect sits in) is conventionally built — treat all
+of it as **best-guess, not observed**, and cross-check by actually opening the
+live site in a real browser (`agent-browser` per this repo's CLAUDE.md) before
+committing to it, since that's ground truth this research pass couldn't reach:
+
+1. **Distortion character (inferred):** Sites in this genre (WebGL portfolio/
+   agency hero lenses — e.g. the broader "liquid/fluid cursor" and "lens
+   distortion hover" genre seen across Codrops-style demos and Awwwards
+   "Mouse Interaction" entries) are built one of two ways: (a) a WebGL canvas
+   rendering the hero content (video/image) as a texture, with a fragment
+   shader doing a **radial UV-displacement / magnification** around the
+   cursor (a true optical bulge, same shape as this repo's own `feImage`
+   `feDisplacementMap` bulge, just computed per-pixel in a shader instead of
+   an SVG filter), or (b) a full fluid/Navier–Stokes-style simulation (the
+   Pavel Dobryakov "WebGL Fluid Simulation" lineage many of these sites reuse)
+   where cursor movement injects velocity/dye into a simulated fluid field
+   that then displaces the texture — this reads visually as more "liquid/
+   swirly" than a clean lens bulge, with visible curl/vorticity rather than a
+   simple radial falloff. Given Awwwards' "Particle Physics & Fluid Shaders"
+   naming for the WebGL mouse-interaction entry, a fluid-simulation-flavoured
+   effect (option b) is at least as plausible as a pure lens bulge (option a)
+   for that specific piece — i.e. it may look more "liquid/swirling" than
+   ours rather than being a straight scaled-up version of the same bulge.
+   No chromatic-aberration or pixel-sorting signal was found anywhere in the
+   sources reached; if either is present it wasn't surfaced by any
+   description found.
+**Follow-up: direct headless-Chrome load (partial ground truth).** After the
+above was written, a plain WebFetch was retried via a real headless Chrome
+instance driven over the DevTools protocol (not the WebFetch tool, which is
+still blocked) — this got past Cloudflare and loaded the real page, but the
+site itself gates its WebGL experience behind a hardware-acceleration check:
+with GPU disabled (required for this headless run) it renders only a "V" logo
+and a "HARDWARE ACCELERATION REQUIRED" splash, no canvas, no visible hero
+effect. So the cursor lens itself still wasn't directly observed — but the
+page's loaded `<script src>` list *was* captured, and confirms real facts the
+Awwwards-only pass above couldn't:
+- Confirmed libraries: `gsap.min.js` **3.15.0** plus the `ScrollToPlugin`,
+  `ScrollTrigger`, `ScrambleTextPlugin`, `InertiaPlugin`, and `Observer`
+  plugins (all from `cdn.prod.website-files.com/gsap/3.15.0/`) — this is a
+  Webflow site using GSAP's paid/bundled plugin set, not a from-scratch WebGL
+  fluid-sim engine and not Three.js loaded as a separate script (no
+  `three.js`/`three.min.js` in the script list, though a bundler could still
+  inline it — inconclusive either way on Three.js specifically).
+- **`InertiaPlugin` is the single most useful confirmed fact for recreating
+  the "tracking" feel.** It's GSAP's physics-based "throw with momentum" easing
+  primitive — this makes the earlier inferred guess ("lerp/spring toward the
+  cursor") concrete: the tracked point most likely has real inertia/momentum
+  (it keeps drifting slightly after the cursor stops, decelerating, rather
+  than a simple critically-damped lerp that stops the instant the cursor
+  does). `Observer` is GSAP's unified pointer/wheel/touch listener, used to
+  feed that inertia system cursor deltas cleanly across input types.
+- This doesn't resolve the distortion-character question (lens bulge vs.
+  fluid-sim) — no canvas ever rendered in this run, so shader code was never
+  reachable — but combined with no `three.js` script tag and a from-Webflow
+  GSAP toolchain, a from-scratch Navier–Stokes fluid sim (heavier, unusual to
+  hand-roll on a marketing site) is now somewhat less likely than a shader- or
+  filter-driven lens/ripple effect animated by GSAP, though still not
+  confirmed.
+
+**Practical recommendation (unchanged in substance, now on firmer footing):**
+for this repo's own effect, the single highest-value, lowest-risk change is
+adding **inertia/eased tracking** of the cursor position that drives the SVG
+filter's effective centre — instead of setting `--cursor-x`/`--cursor-y` to
+the raw pointer position every frame (1:1 snap), lerp/spring toward it each
+frame (a simple `pos += (target - pos) * k` is enough to read as "smooth,"
+without needing to pull in GSAP as a new dependency) — plus a decaying radial
+ripple pulse layered on cursor movement (e.g. briefly boosting the existing
+`feDisplacementMap` `scale` with a value that spikes on movement and decays
+back down, rather than a literal expanding-ring visual) to read as "ripple"
+without requiring a second canvas/shader pipeline. This keeps the existing
+lens-bulge character (already the right family per this repo's own working
+implementation) and layers in the two traits — inertia and a
+movement-triggered pulse — that are now confirmed or well-supported rather
+than purely guessed.
+
+2. **Tracking/easing (inferred):** WebGL cursor-lens effects almost never
+   snap the distortion centre directly to the raw mouse coordinate every
+   frame — direct 1:1 snapping reads as jittery/mechanical on a shader-driven
+   effect. The near-universal convention (and the reason GSAP is explicitly
+   named in Vertex3D's own tag list) is to **lerp/ease the tracked position
+   toward the real cursor position every frame** (e.g. `pos += (mouse - pos) *
+   factor`, or GSAP's `quickTo`/`quickSetter` helpers, which are built exactly
+   for this "smooth cursor follower" use case), producing a soft, slightly
+   trailing feel — not sluggish enough to look laggy, not elastic/bouncy
+   enough to overshoot, more a fast, tight "catches up within a few frames"
+   ease. That "fast smoothing, no overshoot" character is the most common
+   choice in this genre and the safest inference here, but it is an inference
+   from convention, not a timing value read off the actual site.
+3. **Ripple (inferred):** Two common patterns exist for the "does it ripple"
+   question and this research could not determine which (if either) applies
+   here: (a) **continuous, velocity-coupled** — the distortion strength/
+   radius scales with cursor speed so fast movement produces a visible
+   trailing smear/wake, decaying immediately when the cursor stops (typical
+   of the fluid-simulation lineage — no discrete "rings"); (b) **discrete,
+   event-triggered** — a single expanding ring (or a few concentric rings)
+   spawned on click or on movement-start, expanding and fading over roughly
+   0.5–1.5s, independent of continued cursor motion (typical of "water drop"
+   ripple shaders, e.g. the classic sine-based ripple-shader tutorials).
+   Given the Awwwards tag mentions "Particle Physics" specifically (implying
+   continuously-simulated particles/fluid rather than discrete triggered
+   waves), (a) — continuous, velocity-coupled, no discrete rings — is the
+   marginally more likely guess, but this is speculative.
+
+**Tips / gotchas:**
+
+- Treat this whole entry as **weak signal** relative to the rest of
+  `RESEARCH.md`: no direct DOM/shader inspection was achieved. Before an
+  implementer commits real work to matching vertex3d.asia specifically,
+  someone should actually open `https://www.vertex3d.asia/` in a real browser
+  (this repo's CLAUDE.md recommends `agent-browser` for exactly this reason —
+  "the rendered page is the truth") and eyeball the three questions directly:
+  distortion shape, tracking lag, and ripple trigger. A human or a
+  browser-capable agent can answer all three in under a minute of moving the
+  mouse around the hero; that observation should override every inferred
+  claim above.
+- If re-attempting fetch-based research later: the 403 looked like bot
+  protection (Cloudflare or similar) rather than a one-off network blip, so
+  retrying the same plain `WebFetch` call is unlikely to succeed — a
+  browser-rendering tool (headless browser, `agent-browser`, or a screenshot/
+  DOM-dump tool that executes JS and presents as a real browser) is needed,
+  not a second attempt at the same raw HTTP fetch.
+- Practical implication for the implementer regardless of which exact variant
+  vertex3d.asia turns out to use: this repo's existing approach (SVG
+  `feImage`/`feDisplacementMap` bulge via `backdrop-filter`, blur term
+  removed) is already a reasonable match for the "lens/bulge" branch of this
+  genre (inferred option (a) above) — the highest-leverage change beyond
+  removing the blur is almost certainly **adding eased/lerped tracking of the
+  cursor position feeding the filter's center coordinate** (rather than
+  updating it 1:1 per `mousemove` event) if it isn't already doing that,
+  since that smoothing is the one trait essentially every reference site in
+  this genre shares and it's cheap to add (a single lerp on the x/y values
+  driving the SVG filter's `cx`/`cy`, updated via `requestAnimationFrame`).
+  A genuine multi-ring or fluid-simulation ripple is a much larger lift
+  (real WebGL/canvas work, not a CSS filter tweak) and — per the "weak
+  signal" caveat above — isn't confirmed to be needed until someone verifies
+  visually that vertex3d.asia actually has one.
+
+**Sources:**
+- [Vertex3D — Awwwards Honorable Mention (showcase/tag listing, editorial third-party description, not the site's own docs)](https://www.awwwards.com/sites/vertex3d)
+- [Magnetic Cursor to Glassmorphism UI Reveal from Vertex3D — Awwwards inspiration entry](https://www.awwwards.com/inspiration/magnetic-custom-cursor-physics-vertex3d)
+- [Vertex3D — Immersive WebGL Experience Studio (live site — returned HTTP 403 to WebFetch at time of research, not directly inspected)](https://www.vertex3d.asia/)
+- General-genre background only (not vertex3d-specific, cited for the
+  lens-bulge vs. fluid-simulation distinction used in the inference above):
+  [react-fluid-distortion (Pavel Dobryakov fluid shader lineage, React-Three-Fiber port)](https://github.com/whatisjery/react-fluid-distortion)

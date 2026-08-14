@@ -118,6 +118,60 @@ function ramp(value: number, { from, to }: { from: number; to: number }): number
   return smoothstep(clamp((value - from) / (to - from), 0, 1));
 }
 
+// The four eruption-stage captions overlaid on the scroll, one per act of the
+// narration in index.html's `.volcano-stage-captions`. Each is a pure function
+// of the same `progress` the camera runs on, so they scrub backwards on
+// scroll-up and land on the right state after a mid-section reload, exactly
+// like the camera and the end wash.
+//
+// The fade *shapes* differ on purpose, and getting them right is what makes the
+// sequence work at both ends of the track:
+//   - `ramp()` is 0 at and below its `from`, so a symmetric fade-in on the
+//     first caption would leave it invisible at progress 0 — the frame a reader
+//     entering the section actually sees. `onset` is therefore fade-*out* only:
+//     opaque from the start, gone by 0.16.
+//   - the two middle captions are trapezoids (fade in, hold, fade out), written
+//     as `min(rampIn, 1 - rampOut)` rather than through a new shape helper —
+//     composing the existing ramp keeps the bounds readable as four numbers.
+//   - `peak` is fade-*in* only and never fades out: it has to still be up as
+//     `FADE_RED_RANGE` starts at 0.90, so the red wash reads as the climax
+//     resolving the caption rather than as the caption being interrupted.
+// The shapes also cover reduced motion for free: the frozen single call at
+// `REDUCED_MOTION_PROGRESS = 0` renders `onset` at 1 and the other three at 0,
+// which is the correct static state with no extra branch.
+type StageCaption = {
+  /** The matching `data-stage` value in the markup; index drives the property name. */
+  id: string;
+  opacityAt(progress: number): number;
+};
+
+const STAGE_CAPTIONS: StageCaption[] = [
+  {
+    id: "onset",
+    opacityAt: (progress) => 1 - ramp(progress, { from: 0.1, to: 0.16 }),
+  },
+  {
+    id: "buildup",
+    opacityAt: (progress) =>
+      Math.min(
+        ramp(progress, { from: 0.22, to: 0.28 }),
+        1 - ramp(progress, { from: 0.36, to: 0.42 }),
+      ),
+  },
+  {
+    id: "precursor",
+    opacityAt: (progress) =>
+      Math.min(
+        ramp(progress, { from: 0.46, to: 0.52 }),
+        1 - ramp(progress, { from: 0.6, to: 0.66 }),
+      ),
+  },
+  {
+    id: "peak",
+    opacityAt: (progress) => ramp(progress, { from: 0.72, to: 0.8 }),
+  },
+];
+
 /**
  * Mounts a Three.js canvas into `#volcano-scene .volcano-canvas` and scrubs
  * the model's rotation and the camera's distance from scroll position.
@@ -133,6 +187,11 @@ export function initVolcanoScene(): void {
   // throwing out of the whole scene init and leaving a blank canvas.
   const endFade = found.querySelector<HTMLElement>(".volcano-end-fade");
 
+  // Same deal, and null-guarded for the same reason: the captions are an
+  // overlay on a scene that has to work without them, and this file must not
+  // throw if the markup for them isn't there.
+  const stageCaptions = document.querySelector<HTMLElement>(".volcano-stage-captions");
+
   // The sticky canvas is laid out by CSS; fall back to the viewport if this
   // runs before the element has a measured box, so the first frame is never
   // rendered at 0×0 (the window `resize` handler corrects it afterwards).
@@ -143,7 +202,21 @@ export function initVolcanoScene(): void {
 
   const { width, height } = measure();
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  // The one call in here that can fail on a machine that is otherwise fine:
+  // `WebGLRenderer` throws outright if it can't get a context (no WebGL2, GPU
+  // blocklisted, too many live contexts on the page). main.ts calls this init
+  // first in a flat synchronous sequence with no error boundary, so an
+  // uncaught throw here wouldn't just cost the volcano — it would take the
+  // cursor lens and the back-to-top button down with it. Degrade to "no 3D
+  // scene" instead, the same way the optional elements above degrade to "no
+  // fade" rather than aborting the whole init.
+  let renderer: THREE.WebGLRenderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (error) {
+    console.warn("#volcano-scene: no WebGL context, skipping the 3D scene", error);
+    return;
+  }
   // Cap DPR at 2: past that the pixel count buys nothing visible on a phone
   // and costs real frame time on a model this heavy.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -162,8 +235,28 @@ export function initVolcanoScene(): void {
   // ambient term reveals the bake honestly, and a single warm directional key
   // from the upper front-left re-sculpts the large forms and lets the normal
   // map catch on the lava channels without double-shading the bake into mud.
-  scene.add(new THREE.AmbientLight(0xffffff, 1.6));
-  const key = new THREE.DirectionalLight(0xfff0dd, 3.2);
+  //
+  // The two intensities are an *exposure*, and they're set so that no lit rock
+  // can render brighter than its own albedo. Lambert's diffuse response is
+  // (ambient + key·dotNL)/π, and the key's normalised direction below has
+  // y = 0.71, so a flat up-facing slope facing the key gets
+  // (1.05 + 2.1 × 0.71)/π ≈ 1.00 × albedo. The rig used to be 1.6/3.2, which
+  // put that same slope at ~1.53 × albedo: nothing clipped outright, but the
+  // sRGB encode compresses its top end ~2.3×, so the bake's grain in the
+  // 190–210 range was squashed into a flat pale-cream film over every flank
+  // and rim facing up/left/front — read on screen as a sheen on dry stone.
+  // Both numbers were scaled by the same 0.656 so the ~2:1 key:ambient ratio
+  // (and with it the sculpting and the normal-map catch) is unchanged; the
+  // whole rendered image is simply 0.656× in linear light.
+  //
+  // Anything unlit is untouched by this: the lava pool and its additive glow
+  // are MeshBasicMaterial, so trimming the rock's exposure makes the crater
+  // read warmer and deeper rather than dimmer. What *does* have to move with
+  // these numbers is `HORIZON_LIGHT_GAIN` in models/volcano-terrain.ts, which
+  // pre-divides the apron's horizon albedo by this rig's up-facing gain —
+  // re-measure it if either intensity changes here.
+  scene.add(new THREE.AmbientLight(0xffffff, 1.05));
+  const key = new THREE.DirectionalLight(0xfff0dd, 2.1);
   key.position.set(-1, 1.5, 1.1);
   scene.add(key);
 
@@ -254,6 +347,14 @@ export function initVolcanoScene(): void {
       endFade.style.setProperty("--fade-red", ramp(progress, FADE_RED_RANGE).toFixed(4));
       endFade.style.setProperty("--fade-black", ramp(progress, FADE_BLACK_RANGE).toFixed(4));
     }
+    // Also before the model guard: the captions are CSS over the canvas, and a
+    // reader who scrolls in while the 12 MB glTF is still downloading should get
+    // the opening caption rather than a blank frame with nothing to read.
+    if (stageCaptions) {
+      STAGE_CAPTIONS.forEach((stage, index) => {
+        stageCaptions.style.setProperty(`--stage-${index}-opacity`, stage.opacityAt(progress).toFixed(4));
+      });
+    }
     if (!model) return;
     model.rotation.y = progress * Math.PI * 2 * TURNS;
     const { elevationDeg, distance } = poseAt(progress);
@@ -288,10 +389,11 @@ export function initVolcanoScene(): void {
     // rough already. But roughness 1 on a MeshStandardMaterial doesn't mean
     // *no* specular: a dielectric still keeps an F0 ≈ 0.04 GGX lobe, and at
     // roughness 1 that lobe is spread across the whole lit surface as a broad
-    // cool-white film. Against a warm 3.2-intensity key that film is what read
-    // as a wet glaze over the crater walls — not a hotspot (nothing in frame
-    // clips; the lit rock peaks around 90/255), which is why dimming the light
-    // would only have made the volcano darker without making it drier.
+    // cool-white film. Against a warm key that film is what read as a wet glaze
+    // over the crater walls — not a hotspot, which is why dimming the light
+    // alone wouldn't have made the volcano drier. (The exposure trim above is a
+    // separate fix for a separate symptom: this removes the specular film, that
+    // stops the diffuse term from overrunning the albedo.)
     //
     // So the rock is swapped onto a diffuse-only material. With metalness 0,
     // no env map, no roughness/AO map, MeshLambertMaterial is *exactly*
