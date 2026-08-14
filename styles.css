@@ -581,6 +581,52 @@ main > section h2 {
   }
 }
 
+/* Roving glass highlight that tracks the cursor inside the hero — TS sets
+   --cursor-x/--cursor-y (raw px, relative to #hero) and toggles .is-active
+   once real pointer input has landed. Shares z-index 0 with .hero-visual,
+   but comes after it in DOM order so it still paints above the video —
+   it stays below the z-index:1 text, so it only washes over the background
+   video and never obscures (or backdrop-samples) the headline/paragraph/CTA.
+   pointer-events stays off so it never steals the CTA's click. */
+#hero .hero-cursor-glass {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 0;
+  width: clamp(50px, 5vw, 90px);
+  height: clamp(50px, 5vw, 90px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 35%) 0%, rgb(255 236 220 / 16%) 45%, rgb(255 236 220 / 0%) 75%);
+  border: 1px solid rgb(255 255 255 / 22%);
+  box-shadow: inset 0 0 40px rgb(255 255 255 / 12%);
+  backdrop-filter: url("#hero-glass-distort") blur(4px) saturate(150%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(calc(var(--cursor-x, 0) * 1px - 50%), calc(var(--cursor-y, 0) * 1px - 50%)) scale(calc(1 + var(--cursor-speed, 0) * 0.18));
+  transition: opacity 0.25s ease, transform 0.06s linear;
+}
+
+#hero .hero-cursor-glass.is-active {
+  opacity: 1;
+  animation: hero-glass-breathe 4s ease-in-out infinite;
+}
+
+@keyframes hero-glass-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hero .hero-cursor-glass {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------
    Volcano scene (ID-scoped layout)
    ------------------------------------------------------------ */
@@ -627,6 +673,38 @@ main > section h2 {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Sits pinned above both the canvas and the h2 for the whole section so it
+   can wash the scene to red then black right at the handoff to #intro. The
+   fade itself is driven every frame by the three-d-engineer's script via the
+   --fade-red/--fade-black custom properties, so no transition here — it
+   would only lag behind the scroll-scrubbed values. */
+.volcano-end-fade {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100svh;
+  background: transparent;
+  pointer-events: none;
+}
+
+.volcano-end-fade::before,
+.volcano-end-fade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.volcano-end-fade::before {
+  background-color: #c41e1e;
+  opacity: var(--fade-red, 0);
+}
+
+.volcano-end-fade::after {
+  background-color: var(--color-bg);
+  opacity: var(--fade-black, 0);
 }
 
 /* ------------------------------------------------------------

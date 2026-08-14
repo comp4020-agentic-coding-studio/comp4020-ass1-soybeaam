@@ -1,6 +1,7 @@
 import { initParallax, initTimelineProgress } from "./scroll-effects";
 import { initScrollReveal } from "./reveal-observer";
 import { initVolcanoScene } from "./volcano-scene";
+import { initHeroCursorGlass } from "./hero-cursor-glass";
 
 /**
  * Slows the hero background video to a clearly ambient pace. It's stock
@@ -21,3 +22,4 @@ initTimelineProgress();
 initParallax();
 initVolcanoScene();
 initHeroVideoPlaybackRate();
+initHeroCursorGlass();

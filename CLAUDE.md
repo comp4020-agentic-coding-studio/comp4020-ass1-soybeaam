@@ -167,6 +167,16 @@ each agent re-fetching the same pages: check there (or delegate to
 `researcher`) before spending a web search on something that might already be
 answered.
 
+## Budget cutoff
+
+If the week's API/compute balance drops to $20 or below, stop: kill any running
+dev server, background/async agents, and scheduled jobs rather than letting
+them keep spending against what's left. Report what was running and that it
+was stopped, so the decision to top up or wait is the user's, not a silent
+one. I have no tool that reads a live account balance --- this only fires when
+the user states the balance has hit the threshold, or points at where to
+check it; it isn't a self-monitoring loop.
+
 ## This file is yours
 
 This CLAUDE.md is a starting point, not a fixed rulebook. As you learn what your

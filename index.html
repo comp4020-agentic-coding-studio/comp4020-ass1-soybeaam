@@ -7,6 +7,31 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <svg aria-hidden="true" focusable="false" style="position: absolute; width: 0; height: 0; overflow: hidden">
+      <!-- Radial "bulge" displacement map for the hero's water-drop cursor lens: the
+           map image encodes horizontal position as red (0 left -> 255 right) and
+           vertical position as green (0 top -> 255 bottom), blended with mix-blend
+           mode "screen" rather than drawn as literal radial gradients. Fed through
+           feDisplacementMap (R -> x-offset, G -> y-offset), a pixel's displacement
+           vector becomes proportional to (x, y) relative to the filter region's own
+           centre — i.e. it points away from the centre with magnitude growing toward
+           the edges, which reads as a lens bulging the content under it outward,
+           not as noise or a flat blur. A feTurbulence-based version of this filter
+           produced no visible warping at any usable scale; this construction was
+           verified to visibly refract content underneath before landing. -->
+      <filter id="hero-glass-distort" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+        <feImage
+          x="0%"
+          y="0%"
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+          result="map"
+          href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='gx' x1='0' x2='1' y1='0' y2='0'%3E%3Cstop offset='0' stop-color='%23000000'/%3E%3Cstop offset='1' stop-color='%23ff0000'/%3E%3C/linearGradient%3E%3ClinearGradient id='gy' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23000000'/%3E%3Cstop offset='1' stop-color='%2300ff00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' fill='black'/%3E%3Crect width='100' height='100' fill='url(%23gx)' style='mix-blend-mode:screen'/%3E%3Crect width='100' height='100' fill='url(%23gy)' style='mix-blend-mode:screen'/%3E%3C/svg%3E"
+        />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="45" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
     <header>
       <nav aria-label="Primary">
         <a href="#hero">Home</a>
@@ -30,11 +55,13 @@
             <source src="./assets/152085-802335503_medium.mp4" type="video/mp4">
           </video>
         </div>
+        <div class="hero-cursor-glass" aria-hidden="true"></div>
       </section>
 
       <section id="volcano-scene">
         <h2>The Volcano Itself</h2>
         <div class="volcano-canvas" aria-hidden="true"></div>
+        <div class="volcano-end-fade" aria-hidden="true"></div>
       </section>
 
       <section id="intro">

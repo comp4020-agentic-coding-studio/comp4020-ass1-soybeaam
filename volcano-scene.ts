@@ -13,9 +13,10 @@
 //
 // The camera travels a three-act path, each act a (elevation angle, distance)
 // keyframe interpolated with an eased blend (see `poseAt`): it opens close
-// and low on the crater rim, rises and pulls back into a bird's-eye
-// establishing shot of the whole cone, then dives back down near-vertical
-// into the crater's centre for the finale. Camera position is built from
+// and low on the crater rim, rises and pulls back into a wide three-quarter
+// establishing shot of the whole cone, then swings up over the rim and dives
+// in near-vertical on the crater's centre for the finale, which washes out to
+// red and then black as the section hands off. Camera position is built from
 // spherical coordinates around the model's centre with a fixed azimuth (the
 // camera never leaves the Y–Z plane through that centre) — elevation moves it
 // through Y and Z simultaneously, exactly the two axes the shot needs; X stays
@@ -30,6 +31,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import volcanoUrl from "./src/volcano.glb?url";
 import { gatedRaf } from "./scroll-effects";
+import { buildCraterLava, buildTerrainApron, sampleHeightfield } from "./src/models/volcano-terrain";
 
 /** Full turns of the model across the whole section. */
 const TURNS = 2;
@@ -47,10 +49,17 @@ const TURNS = 2;
 //   1. OPEN     — close and low on the rim, matching the section's opening
 //      shot: the crater fills the frame and the flat skirt of the terrain
 //      plate is mostly cropped out.
-//   2. AERIAL   — risen and pulled back into a wide bird's-eye establishing
-//      shot of the whole cone.
-//   3. CENTRE   — dived back down to near-vertical, in close on the crater's
-//      centre, for the finale.
+//   2. AERIAL   — risen and pulled back into a wide establishing shot of the
+//      whole cone. Held at a three-quarter elevation rather than a true
+//      bird's-eye: at 78° the cone flattened into a map-like overhead plan
+//      that read as a contour diagram, losing the profile and the height that
+//      make it a volcano. Around 52° the silhouette, the crater rim and the
+//      lava in it are all still legible in one frame.
+//   3. CENTRE   — swung back up to near-vertical and dived in close on the
+//      crater's centre, for the finale. This leg is a bigger elevation swing
+//      than it used to be (52° → 85° rather than 78° → 85°), which is the
+//      point: the drop into the crater now has a change of angle behind it,
+//      not just a change of distance.
 // Elevation is degrees above the horizontal plane through the model's centre;
 // 0° is dead-on, 90° is straight down (never reached — see `poseAt`).
 type PoseKeyframe = { progress: number; elevationDeg: number; distanceWide: number; distanceNarrow: number };
@@ -63,7 +72,7 @@ type PoseKeyframe = { progress: number; elevationDeg: number; distanceWide: numb
 // the difference isn't worth carrying.
 const POSE_KEYFRAMES: PoseKeyframe[] = [
   { progress: 0, elevationDeg: 28.87, distanceWide: 0.62, distanceNarrow: 0.75 }, // OPEN
-  { progress: 0.45, elevationDeg: 78, distanceWide: 1.7, distanceNarrow: 1.7 }, // AERIAL
+  { progress: 0.45, elevationDeg: 52, distanceWide: 1.7, distanceNarrow: 1.7 }, // AERIAL
   { progress: 1, elevationDeg: 85, distanceWide: 0.16, distanceNarrow: 0.22 }, // CENTRE
 ];
 const POSE_ASPECT_RANGE = { narrow: 0.5, wide: 1.6 };
@@ -81,12 +90,32 @@ const MIN_FIT_ASPECT = 1.0;
 /** Pose used for the single static frame under prefers-reduced-motion: the opening shot. */
 const REDUCED_MOTION_PROGRESS = 0;
 
+// The section ends by washing the whole frame out — first red, then black —
+// so the finale dive into the crater resolves into a deliberate cut rather
+// than the volcano simply sliding off the top of the screen while #intro's
+// text slides up under it. Two overlapping ramps over the last tenth of the
+// scrub track: red gets ~6% of the track to itself before black starts, so
+// there's a readable red-dominant beat, and black finishes exactly at
+// progress 1 — the moment the pin releases and the section hands off.
+//
+// These drive `--fade-red` / `--fade-black` on `.volcano-end-fade`, whose two
+// pseudo-element layers are the actual colour (see styles.css). Progress is
+// the same pure function of scroll position the camera uses, so the wash
+// scrubs backwards on scroll-up like everything else here.
+const FADE_RED_RANGE = { from: 0.9, to: 0.96 };
+const FADE_BLACK_RANGE = { from: 0.94, to: 1 };
+
 function smoothstep(t: number): number {
   return t * t * (3 - 2 * t);
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/** 0 at or below `from`, 1 at or above `to`, smoothly eased in between. */
+function ramp(value: number, { from, to }: { from: number; to: number }): number {
+  return smoothstep(clamp((value - from) / (to - from), 0, 1));
 }
 
 /**
@@ -98,6 +127,11 @@ export function initVolcanoScene(): void {
   const container = found?.querySelector<HTMLElement>(".volcano-canvas");
   if (!found || !container) return;
   const section: HTMLElement = found;
+
+  // Optional on purpose: the wash is decoration over a scene that has to work
+  // without it, so a missing element degrades to "no fade" rather than
+  // throwing out of the whole scene init and leaving a blank canvas.
+  const endFade = found.querySelector<HTMLElement>(".volcano-end-fade");
 
   // The sticky canvas is laid out by CSS; fall back to the viewport if this
   // runs before the element has a measured box, so the first frame is never
@@ -122,7 +156,8 @@ export function initVolcanoScene(): void {
   const camera = new THREE.PerspectiveCamera(FOV, width / height, 0.1, 4000);
 
   // The model's only material is a baked colour map (`COLORMAP_BAKE`) with a
-  // normal map, metalness 0 — most of its shading is already painted into the
+  // normal map, metalness 0 and (after the swap in the loader callback below)
+  // no specular at all — most of its shading is already painted into the
   // albedo. So the lighting here is deliberately ambient-dominant: the
   // ambient term reveals the bake honestly, and a single warm directional key
   // from the upper front-left re-sculpts the large forms and lets the normal
@@ -213,6 +248,12 @@ export function initVolcanoScene(): void {
 
   /** Applies a pose that is a pure function of `progress`. */
   function applyProgress(progress: number): void {
+    // Before the model guard: the end wash is CSS over the canvas, and it
+    // should still resolve to 0 on the frames rendered before the glTF lands.
+    if (endFade) {
+      endFade.style.setProperty("--fade-red", ramp(progress, FADE_RED_RANGE).toFixed(4));
+      endFade.style.setProperty("--fade-black", ramp(progress, FADE_BLACK_RANGE).toFixed(4));
+    }
     if (!model) return;
     model.rotation.y = progress * Math.PI * 2 * TURNS;
     const { elevationDeg, distance } = poseAt(progress);
@@ -238,6 +279,57 @@ export function initVolcanoScene(): void {
   loader.load(volcanoUrl, (gltf) => {
     model = gltf.scene;
 
+    // Take the specular lobe off the rock, so it reads as matte stone rather
+    // than something wet.
+    //
+    // The obvious knob — roughness — is already spent: `COLORMAP_BAKE` sets
+    // `metallicFactor: 0` and omits `roughnessFactor`, which per the glTF spec
+    // means 1.0, and there's no roughness map, so the material arrives fully
+    // rough already. But roughness 1 on a MeshStandardMaterial doesn't mean
+    // *no* specular: a dielectric still keeps an F0 ≈ 0.04 GGX lobe, and at
+    // roughness 1 that lobe is spread across the whole lit surface as a broad
+    // cool-white film. Against a warm 3.2-intensity key that film is what read
+    // as a wet glaze over the crater walls — not a hotspot (nothing in frame
+    // clips; the lit rock peaks around 90/255), which is why dimming the light
+    // would only have made the volcano darker without making it drier.
+    //
+    // So the rock is swapped onto a diffuse-only material. With metalness 0,
+    // no env map, no roughness/AO map, MeshLambertMaterial is *exactly*
+    // MeshStandardMaterial minus that specular term — same BRDF_Lambert for
+    // both the direct and the indirect diffuse, same normal-map chunk — so the
+    // albedo bake, the lava-channel relief and the light rig all behave as
+    // before, and the shader is cheaper on a 150k-triangle model into the
+    // bargain. Materials are swapped once per source material, not per mesh,
+    // so the three meshes sharing `COLORMAP_BAKE` keep sharing one material.
+    //
+    // This runs before any generated geometry is parented to `model`, so the
+    // apron and the lava keep the materials they were built with.
+    const matteRock = new Map<THREE.Material, THREE.MeshLambertMaterial>();
+    const toMatte = (material: THREE.Material): THREE.Material => {
+      if (!(material instanceof THREE.MeshStandardMaterial)) return material;
+      const cached = matteRock.get(material);
+      if (cached) return cached;
+      const matte = new THREE.MeshLambertMaterial({
+        name: material.name,
+        color: material.color,
+        map: material.map,
+        normalMap: material.normalMap,
+        // Cloned, not shared: `Material.setValues` copies a Color but assigns
+        // a Vector2 by reference, and the source material is disposed below.
+        normalScale: material.normalScale.clone(),
+        side: material.side,
+      });
+      matteRock.set(material, matte);
+      material.dispose();
+      return matte;
+    };
+    model.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      node.material = Array.isArray(node.material)
+        ? node.material.map(toMatte)
+        : toMatte(node.material);
+    });
+
     // Measured once, before any rotation is applied: rotation is about the
     // model's own Y axis, which already passes through the horizontal centre
     // of this export, so the centre stays put as it spins.
@@ -254,15 +346,44 @@ export function initVolcanoScene(): void {
 
     scene.add(model);
 
+    // The apron fades to whatever colour is actually behind the canvas (the
+    // renderer is alpha:true and nothing sets scene.background, so that's
+    // .volcano-canvas's own background), read from CSS rather than duplicated
+    // as a hex literal here — retheme the page and the horizon follows.
+    const pageSurface = new THREE.Color();
+    try {
+      pageSurface.setStyle(getComputedStyle(container).backgroundColor);
+    } catch {
+      pageSurface.setHex(0x1e1613);
+    }
+
+    // Everything below is generated geometry parented to `model`, and it is
+    // built *after* the box/corners capture above on purpose: the apron is an
+    // order of magnitude wider than the baked plate, so if it were included in
+    // the fit the camera would pull back to frame the whole plain and the cone
+    // would become a dot. Parenting to `model` (rather than `scene`) keeps it
+    // centred and turning with the model as `model.rotation.y` scrubs.
+    const field = sampleHeightfield(model);
+    model.add(buildTerrainApron(field, { horizon: pageSurface }));
+    const lava = buildCraterLava(field);
+    model.add(lava.group);
+
     if (reducedMotion) {
       // Mirrors initParallax's reduced-motion early return: no loop, no
-      // scroll-linked motion, just one settled frame of the same scene.
+      // scroll-linked motion, just one settled frame of the same scene. The
+      // lava is posed once at t = 0 rather than left unpulsed at whatever its
+      // material defaults were.
+      lava.update(0);
       applyProgress(REDUCED_MOTION_PROGRESS);
       renderer.render(scene, camera);
       return;
     }
 
     gatedRaf(section, () => {
+      // The lava pulse runs on scene time, not scroll: it has to keep looking
+      // molten while the reader is holding still. Everything else in here is a
+      // pure function of scroll position.
+      lava.update(performance.now() / 1000);
       applyProgress(scrollProgress());
       renderer.render(scene, camera);
     });
