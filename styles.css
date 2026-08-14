@@ -719,86 +719,6 @@ main > section h2 {
   height: 100%;
 }
 
-/* Sticky box sitting between the canvas (z-index 1) and the end-fade
-   (z-index 3) so captions read over the 3D render but still get washed
-   out by the fade at the handoff. Content anchors to the lower third so
-   it never collides with the sticky h2 pinned top-left. The three-d-
-   engineer's script writes --stage-0-opacity.. --stage-3-opacity onto
-   this element every scroll frame, one per .volcano-stage in DOM order. */
-.volcano-stage-captions {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100svh;
-  margin-top: -100svh;
-  pointer-events: none;
-}
-
-/* All four stages fill the same lower-third/left-aligned spot and stack
-   directly on top of each other (position: absolute, not flow, with an
-   explicit inset rather than the parent's flex/padding — the parent is
-   itself the positioned containing block, so offsets live on the stages
-   and don't get doubled with any padding the parent might also carry)
-   so the crossfade is pure opacity with no layout shift between stages. */
-.volcano-stage {
-  position: absolute;
-  inset: auto auto clamp(3rem, 12vh, 6rem) var(--section-pad-x);
-  max-width: 32rem;
-  padding: 1.5rem 1.75rem;
-  background: rgb(18 13 12 / 85%);
-  border-radius: 1rem;
-  text-shadow: 0 0.25rem 1rem rgb(0 0 0 / 70%);
-}
-
-.volcano-stage:nth-child(1) {
-  opacity: var(--stage-0-opacity, 0);
-}
-
-.volcano-stage:nth-child(2) {
-  opacity: var(--stage-1-opacity, 0);
-}
-
-.volcano-stage:nth-child(3) {
-  opacity: var(--stage-2-opacity, 0);
-}
-
-.volcano-stage:nth-child(4) {
-  opacity: var(--stage-3-opacity, 0);
-}
-
-.volcano-stage-eyebrow {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-lava);
-}
-
-.volcano-stage h3 {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
-  color: var(--color-text);
-}
-
-/* stylelint-disable-next-line no-descending-specificity -- distinct
-   .volcano-stage vs #hero scoping means these never target the same element */
-.volcano-stage p {
-  margin: 0;
-  max-width: 30rem;
-  color: var(--color-text-muted);
-}
-
-@media (width <= 640px) {
-  .volcano-stage {
-    max-width: calc(100% - (var(--section-pad-x) * 2));
-    padding: 1.25rem 1.5rem;
-  }
-}
-
 /* Sits pinned above both the canvas and the h2 for the whole section so it
    can wash the scene to red then black right at the handoff to #intro. The
    fade itself is driven every frame by the three-d-engineer's script via the
@@ -810,7 +730,6 @@ main > section h2 {
   z-index: 3;
   width: 100%;
   height: 100svh;
-  margin-top: -200svh;
   background: transparent;
   pointer-events: none;
 }

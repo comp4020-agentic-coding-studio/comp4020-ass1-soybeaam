@@ -118,60 +118,6 @@ function ramp(value: number, { from, to }: { from: number; to: number }): number
   return smoothstep(clamp((value - from) / (to - from), 0, 1));
 }
 
-// The four eruption-stage captions overlaid on the scroll, one per act of the
-// narration in index.html's `.volcano-stage-captions`. Each is a pure function
-// of the same `progress` the camera runs on, so they scrub backwards on
-// scroll-up and land on the right state after a mid-section reload, exactly
-// like the camera and the end wash.
-//
-// The fade *shapes* differ on purpose, and getting them right is what makes the
-// sequence work at both ends of the track:
-//   - `ramp()` is 0 at and below its `from`, so a symmetric fade-in on the
-//     first caption would leave it invisible at progress 0 — the frame a reader
-//     entering the section actually sees. `onset` is therefore fade-*out* only:
-//     opaque from the start, gone by 0.16.
-//   - the two middle captions are trapezoids (fade in, hold, fade out), written
-//     as `min(rampIn, 1 - rampOut)` rather than through a new shape helper —
-//     composing the existing ramp keeps the bounds readable as four numbers.
-//   - `peak` is fade-*in* only and never fades out: it has to still be up as
-//     `FADE_RED_RANGE` starts at 0.90, so the red wash reads as the climax
-//     resolving the caption rather than as the caption being interrupted.
-// The shapes also cover reduced motion for free: the frozen single call at
-// `REDUCED_MOTION_PROGRESS = 0` renders `onset` at 1 and the other three at 0,
-// which is the correct static state with no extra branch.
-type StageCaption = {
-  /** The matching `data-stage` value in the markup; index drives the property name. */
-  id: string;
-  opacityAt(progress: number): number;
-};
-
-const STAGE_CAPTIONS: StageCaption[] = [
-  {
-    id: "onset",
-    opacityAt: (progress) => 1 - ramp(progress, { from: 0.1, to: 0.16 }),
-  },
-  {
-    id: "buildup",
-    opacityAt: (progress) =>
-      Math.min(
-        ramp(progress, { from: 0.22, to: 0.28 }),
-        1 - ramp(progress, { from: 0.36, to: 0.42 }),
-      ),
-  },
-  {
-    id: "precursor",
-    opacityAt: (progress) =>
-      Math.min(
-        ramp(progress, { from: 0.46, to: 0.52 }),
-        1 - ramp(progress, { from: 0.6, to: 0.66 }),
-      ),
-  },
-  {
-    id: "peak",
-    opacityAt: (progress) => ramp(progress, { from: 0.72, to: 0.8 }),
-  },
-];
-
 /**
  * Mounts a Three.js canvas into `#volcano-scene .volcano-canvas` and scrubs
  * the model's rotation and the camera's distance from scroll position.
@@ -186,11 +132,6 @@ export function initVolcanoScene(): void {
   // without it, so a missing element degrades to "no fade" rather than
   // throwing out of the whole scene init and leaving a blank canvas.
   const endFade = found.querySelector<HTMLElement>(".volcano-end-fade");
-
-  // Same deal, and null-guarded for the same reason: the captions are an
-  // overlay on a scene that has to work without them, and this file must not
-  // throw if the markup for them isn't there.
-  const stageCaptions = document.querySelector<HTMLElement>(".volcano-stage-captions");
 
   // The sticky canvas is laid out by CSS; fall back to the viewport if this
   // runs before the element has a measured box, so the first frame is never
@@ -346,14 +287,6 @@ export function initVolcanoScene(): void {
     if (endFade) {
       endFade.style.setProperty("--fade-red", ramp(progress, FADE_RED_RANGE).toFixed(4));
       endFade.style.setProperty("--fade-black", ramp(progress, FADE_BLACK_RANGE).toFixed(4));
-    }
-    // Also before the model guard: the captions are CSS over the canvas, and a
-    // reader who scrolls in while the 12 MB glTF is still downloading should get
-    // the opening caption rather than a blank frame with nothing to read.
-    if (stageCaptions) {
-      STAGE_CAPTIONS.forEach((stage, index) => {
-        stageCaptions.style.setProperty(`--stage-${index}-opacity`, stage.opacityAt(progress).toFixed(4));
-      });
     }
     if (!model) return;
     model.rotation.y = progress * Math.PI * 2 * TURNS;
