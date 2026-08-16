@@ -527,15 +527,15 @@ main > section h2 {
   color: var(--color-text-muted);
 }
 
-/* Offset toward the marker's left edge (clear of the centred step-number
-   glyph) rather than through the badge's centre; anchored to the same
-   content edge as the timeline items via the section's shared
-   --section-pad-x. */
+/* Sits inside the section's own left padding gutter, before
+   --section-pad-x rather than after it, so it clears the badge column
+   (.timeline-item::before) and the section heading entirely instead of
+   cutting through either. */
 .timeline-line {
   position: absolute;
   top: 1.5rem;
   bottom: 1.5rem;
-  left: calc(var(--section-pad-x) + 0.4rem - (var(--timeline-line-width) / 2));
+  left: calc(var(--section-pad-x) - 1.25rem - (var(--timeline-line-width) / 2));
   width: var(--timeline-line-width);
   background: var(--timeline-line-color);
   border-radius: var(--timeline-line-width);
@@ -562,7 +562,7 @@ main > section h2 {
   }
 
   .timeline-line {
-    left: calc(var(--section-pad-x) + 0.3rem - (var(--timeline-line-width) / 2));
+    left: calc(var(--section-pad-x) - 0.75rem - (var(--timeline-line-width) / 2));
   }
 }
 
