@@ -24,7 +24,7 @@ Key commits so far:
   Lavasimulate's interaction models before scoping `eruption-sim.ts` from
   scratch):
   [`9a2436c`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/9a2436cc18e8a1105d427ac50ed1317275938a3e)
-  [`972abb6`]
+  [`972abb6`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/972abb699ba1d79a751d3710bedfcab5b2ace78f)
 
   I initially tried to recreate the eruption panel from an image and website reference. Claude struggled to reproduce it, and asking it to keep the working parts while fixing others just triggered full rewrites of the component. Instead of re-prompting the same implementation, I pulled up a new session and prompted from empty context from the web AI. I knew it was working once the new implementation let me make targeted changes without the rest being rewritten — much more control over the final result.
 
