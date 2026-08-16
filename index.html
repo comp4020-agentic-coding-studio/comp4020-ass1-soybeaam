@@ -6,6 +6,727 @@
     <title>Scroll showcase — COMP4020 prototype</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+    <!-- Scoped styling for the VEI eruption simulator (#underground-process).
+         Kept inline rather than in styles.css: it's a self-contained widget
+         pasted whole, so its rules live with its markup/script instead of
+         being split across files. Colours are scoped to .vei-app rather than
+         :root so they can't leak into the rest of the page; --font-display
+         and --font-body deliberately aren't redeclared here so the widget
+         inherits the site's own type instead of pulling in Google Fonts. -->
+    <style>
+      .vei-app {
+        --void: #0b0e13;
+        --sky-top: #1c2733;
+        --sky-mid: #3a4a5c;
+        --rock-dark: #241b16;
+        --ash: #9a9186;
+        --ash-dark: #5b564f;
+        --magma-core: #ff5a1f;
+        --magma-bright: #ffb238;
+        --ember: #ff2d0e;
+        --sulfur: #d9c25c;
+        --ok-green: #7fae6e;
+        --paper: #e9e4da;
+        --panel-bg: #14100d;
+        --panel-line: rgb(233 228 218 / 12%);
+        --vei-font-mono: ui-monospace, "SFMono-Regular", menlo, consolas, monospace;
+
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 64rem;
+        min-height: 34rem;
+        margin-inline: auto;
+        border: 1px solid var(--panel-line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--void);
+        color: var(--paper);
+        font-family: var(--font-body);
+        text-align: left;
+      }
+
+      .vei-hdr {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1.125rem 1.375rem 0.625rem;
+        border-bottom: 1px solid var(--panel-line);
+      }
+
+      .vei-hdr-title {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .vei-hdr-title .vei-mark {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        background: var(--magma-core);
+        border-radius: 1px;
+        transform: rotate(45deg);
+        box-shadow: 0 0 8px 1px rgb(255 90 31 / 70%);
+      }
+
+      .vei-hdr-sub {
+        font-family: var(--vei-font-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.03em;
+        color: var(--ash);
+      }
+
+      .vei-main {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        flex: 1;
+      }
+
+      @media (width <= 880px) {
+        .vei-main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .vei-stage-wrap {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 1.125rem;
+      }
+
+      .vei-stage {
+        position: relative;
+        flex: 1;
+        min-height: 26rem;
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 60%, #566b7d 100%);
+      }
+
+      .vei-stage canvas#scene {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .vei-stage-readout {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.875rem;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid rgb(233 228 218 / 15%);
+        border-radius: 3px;
+        background: rgb(11 14 19 / 50%);
+        font-family: var(--vei-font-mono);
+        font-size: 0.69rem;
+        letter-spacing: 0.03em;
+        color: var(--paper);
+        pointer-events: none;
+      }
+
+      .vei-scale-note {
+        position: absolute;
+        bottom: 0.625rem;
+        left: 0.875rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        background: rgb(11 14 19 / 45%);
+        font-family: var(--vei-font-mono);
+        font-size: 0.625rem;
+        color: rgb(233 228 218 / 75%);
+        pointer-events: none;
+      }
+
+      .vei-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.875rem;
+        padding: 0.625rem 0.25rem 0 0;
+        font-family: var(--vei-font-mono);
+        font-size: 0.66rem;
+        color: var(--ash);
+      }
+
+      .vei-legend span {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .vei-legend i {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+      }
+
+      .vei-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.125rem;
+        padding: 1.25rem;
+        border-left: 1px solid var(--panel-line);
+        background: var(--panel-bg);
+        overflow-y: auto;
+      }
+
+      .vei-hero {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.75rem;
+      }
+
+      .vei-hero .vei-num {
+        font-family: var(--font-display);
+        font-size: 4rem;
+        font-weight: 700;
+        line-height: 0.85;
+        color: var(--magma-bright);
+        transition: color 0.3s ease;
+      }
+
+      .vei-hero .vei-label {
+        padding-bottom: 0.5rem;
+      }
+
+      .vei-hero .vei-label .vei-eyebrow {
+        font-family: var(--vei-font-mono);
+        font-size: 0.66rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ash);
+      }
+
+      .vei-hero .vei-label .vei-name {
+        font-family: var(--font-display);
+        font-size: 1.06rem;
+        font-weight: 600;
+        color: var(--paper);
+      }
+
+      .vei-slider-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .vei-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+      }
+
+      .vei-app input[type="range"] {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--ok-green), var(--sulfur) 40%, var(--magma-core) 70%, var(--ember) 100%);
+        outline: none;
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .vei-app input[type="range"]::-webkit-slider-thumb {
+        width: 18px;
+        height: 18px;
+        border: 3px solid var(--rock-dark);
+        border-radius: 50%;
+        background: var(--paper);
+        box-shadow: 0 0 0 2px rgb(0 0 0 / 30%);
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .vei-app input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border: 3px solid var(--rock-dark);
+        border-radius: 50%;
+        background: var(--paper);
+        cursor: pointer;
+      }
+
+      .vei-app input[type="range"]:focus-visible::-webkit-slider-thumb {
+        outline: 2px solid var(--sulfur);
+        outline-offset: 2px;
+      }
+
+      .vei-scale-ticks {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 1px;
+        font-family: var(--vei-font-mono);
+        font-size: 0.625rem;
+        color: var(--ash-dark);
+      }
+
+      .vei-scale-ticks span.active {
+        color: var(--sulfur);
+      }
+
+      .vei-desc {
+        padding-top: 0.875rem;
+        border-top: 1px solid var(--panel-line);
+        font-size: 0.8125rem;
+        line-height: 1.55;
+        color: rgb(233 228 218 / 88%);
+      }
+
+      .vei-desc b {
+        color: var(--paper);
+      }
+
+      .vei-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.625rem;
+      }
+
+      .vei-stat {
+        padding: 0.5625rem 0.625rem;
+        border: 1px solid var(--panel-line);
+        border-radius: 5px;
+        background: rgb(233 228 218 / 4%);
+      }
+
+      .vei-stat .vei-k {
+        margin-bottom: 0.25rem;
+        font-family: var(--vei-font-mono);
+        font-size: 0.59rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ash);
+      }
+
+      .vei-stat .vei-v {
+        font-family: var(--vei-font-mono);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--magma-bright);
+      }
+
+      .vei-example {
+        padding-top: 0.375rem;
+        font-family: var(--vei-font-mono);
+        font-size: 0.6875rem;
+        color: var(--ash);
+      }
+
+      .vei-example b {
+        font-family: var(--font-body);
+        color: var(--paper);
+      }
+
+      .vei-footnote {
+        margin-top: auto;
+        padding-top: 0.625rem;
+        border-top: 1px solid var(--panel-line);
+        font-size: 0.66rem;
+        line-height: 1.5;
+        color: var(--ash-dark);
+      }
+
+      @media (width <= 640px) {
+        .vei-stage {
+          min-height: 20rem;
+        }
+      }
+
+      /* Scoped styling for the Eruption Style Spectrum widget (#features).
+         Same rationale as the VEI block above: pasted whole, kept inline,
+         colours scoped to .es-app rather than :root, and --font-display /
+         --font-body deliberately left undeclared so it inherits the site's
+         type instead of the widget's original Google Fonts. */
+      .es-app {
+        --void: #0b0e13;
+        --sky-top: #1c2733;
+        --sky-mid: #3a4a5c;
+        --rock-dark: #241b16;
+        --ash: #9a9186;
+        --ash-dark: #5b564f;
+        --magma-core: #ff5a1f;
+        --magma-bright: #ffb238;
+        --ember: #ff2d0e;
+        --sulfur: #d9c25c;
+        --ok-green: #6b8f5e;
+        --paper: #e9e4da;
+        --panel-bg: #14100d;
+        --panel-line: rgb(233 228 218 / 12%);
+        --es-font-mono: ui-monospace, "SFMono-Regular", menlo, consolas, monospace;
+
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 64rem;
+        min-height: 30rem;
+        margin-inline: auto;
+        border: 1px solid var(--panel-line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--void);
+        color: var(--paper);
+        font-family: var(--font-body);
+        text-align: left;
+      }
+
+      .es-hdr {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1.125rem 1.375rem 0.625rem;
+        border-bottom: 1px solid var(--panel-line);
+      }
+
+      .es-hdr-title {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .es-hdr-title .es-mark {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        background: var(--magma-core);
+        border-radius: 1px;
+        transform: rotate(45deg);
+        box-shadow: 0 0 8px 1px rgb(255 90 31 / 70%);
+      }
+
+      .es-hdr-sub {
+        font-family: var(--es-font-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.03em;
+        color: var(--ash);
+      }
+
+      .es-main {
+        display: grid;
+        grid-template-columns: 1fr 22.5rem;
+        flex: 1;
+      }
+
+      @media (width <= 880px) {
+        .es-main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .es-stage-wrap {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 1.125rem;
+      }
+
+      .es-stage {
+        position: relative;
+        flex: 1;
+        min-height: 26.25rem;
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 60%, #566b7d 100%);
+      }
+
+      .es-stage canvas#esScene {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .es-stage-readout {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.875rem;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid rgb(233 228 218 / 15%);
+        border-radius: 3px;
+        background: rgb(11 14 19 / 50%);
+        font-family: var(--es-font-mono);
+        font-size: 0.69rem;
+        letter-spacing: 0.03em;
+        color: var(--paper);
+        pointer-events: none;
+      }
+
+      .es-vent-state {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.875rem;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid rgb(217 194 92 / 25%);
+        border-radius: 3px;
+        background: rgb(11 14 19 / 50%);
+        font-family: var(--es-font-mono);
+        font-size: 0.625rem;
+        letter-spacing: 0.04em;
+        color: var(--sulfur);
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .es-stage-note {
+        position: absolute;
+        bottom: 0.625rem;
+        left: 0.875rem;
+        max-width: 60%;
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        background: rgb(11 14 19 / 45%);
+        font-family: var(--es-font-mono);
+        font-size: 0.625rem;
+        color: rgb(233 228 218 / 75%);
+        pointer-events: none;
+      }
+
+      .es-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.875rem;
+        padding: 0.625rem 0.25rem 0;
+        font-family: var(--es-font-mono);
+        font-size: 0.66rem;
+        color: var(--ash);
+      }
+
+      .es-legend span {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .es-legend i {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+      }
+
+      .es-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.25rem;
+        border-left: 1px solid var(--panel-line);
+        background: var(--panel-bg);
+        overflow-y: auto;
+      }
+
+      .es-stage-rail {
+        display: flex;
+        gap: 4px;
+      }
+
+      .es-stage-rail .es-dot {
+        flex: 1;
+        height: 4px;
+        border-radius: 2px;
+        background: rgb(233 228 218 / 12%);
+        transition: background 0.25s ease;
+      }
+
+      .es-stage-rail .es-dot.done {
+        background: var(--sulfur);
+      }
+
+      .es-stage-rail .es-dot.active {
+        background: var(--magma-bright);
+      }
+
+      .es-hero {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .es-hero .es-eyebrow {
+        font-family: var(--es-font-mono);
+        font-size: 0.66rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ash);
+      }
+
+      .es-hero .es-name {
+        font-family: var(--font-display);
+        font-size: 2.125rem;
+        font-weight: 700;
+        line-height: 1.05;
+        color: var(--magma-bright);
+      }
+
+      .es-hero .es-subname {
+        font-family: var(--es-font-mono);
+        font-size: 0.69rem;
+        color: var(--sulfur);
+      }
+
+      .es-slider-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .es-app input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--ok-green), var(--sulfur) 35%, var(--magma-core) 65%, var(--ember) 100%);
+        outline: none;
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .es-app input[type="range"]::-webkit-slider-thumb {
+        width: 18px;
+        height: 18px;
+        border: 3px solid var(--rock-dark);
+        border-radius: 50%;
+        background: var(--paper);
+        box-shadow: 0 0 0 2px rgb(0 0 0 / 30%);
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .es-app input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border: 3px solid var(--rock-dark);
+        border-radius: 50%;
+        background: var(--paper);
+        cursor: pointer;
+      }
+
+      .es-app input[type="range"]:focus-visible::-webkit-slider-thumb {
+        outline: 2px solid var(--sulfur);
+        outline-offset: 2px;
+      }
+
+      .es-scale-ticks {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 1px;
+        font-family: var(--es-font-mono);
+        font-size: 0.59rem;
+        color: var(--ash-dark);
+      }
+
+      .es-scale-ticks span {
+        flex: 1;
+        text-align: center;
+      }
+
+      .es-scale-ticks span:first-child {
+        text-align: left;
+      }
+
+      .es-scale-ticks span:last-child {
+        text-align: right;
+      }
+
+      .es-scale-ticks span.active {
+        font-weight: 600;
+        color: var(--sulfur);
+      }
+
+      .es-desc {
+        padding-top: 0.875rem;
+        border-top: 1px solid var(--panel-line);
+        font-size: 0.8125rem;
+        line-height: 1.55;
+        color: rgb(233 228 218 / 88%);
+      }
+
+      .es-desc b {
+        color: var(--paper);
+      }
+
+      .es-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.625rem;
+      }
+
+      .es-stat {
+        padding: 0.5625rem 0.625rem;
+        border: 1px solid var(--panel-line);
+        border-radius: 5px;
+        background: rgb(233 228 218 / 4%);
+      }
+
+      .es-stat.es-wide {
+        grid-column: 1 / -1;
+      }
+
+      .es-stat .es-k {
+        margin-bottom: 0.25rem;
+        font-family: var(--es-font-mono);
+        font-size: 0.59rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ash);
+      }
+
+      .es-stat .es-v {
+        font-family: var(--es-font-mono);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--magma-bright);
+      }
+
+      .es-example {
+        padding-top: 0.125rem;
+        font-family: var(--es-font-mono);
+        font-size: 0.6875rem;
+        color: var(--ash);
+      }
+
+      .es-example b {
+        font-family: var(--font-body);
+        color: var(--paper);
+      }
+
+      .es-footnote {
+        margin-top: auto;
+        padding-top: 0.625rem;
+        border-top: 1px solid var(--panel-line);
+        font-size: 0.66rem;
+        line-height: 1.5;
+        color: var(--ash-dark);
+      }
+
+      @media (width <= 640px) {
+        .es-stage {
+          min-height: 20rem;
+        }
+      }
+    </style>
   </head>
   <body>
     <svg aria-hidden="true" focusable="false" style="position: absolute; width: 0; height: 0; overflow: hidden">
@@ -64,130 +785,80 @@
       </section>
 
       <section id="underground-process">
-        <h2 data-animation="fade-up">Beneath the Surface</h2>
-        <div class="eruption-sim" data-animation="image-reveal" data-eruption-style="effusive">
-          <div class="eruption-sim-stage">
-            <div class="eruption-sim-visual">
-              <svg class="eruption-sim-diagram" viewBox="0 0 300 400" role="img" aria-label="Cross-section and surface view of a volcano showing magma pressure, a fuming vent, and the currently selected eruption style">
-                <path class="eruption-sim-crust" d="M0,260 L4,256 L8,251 L14,244 Q28,232 42,224 L52,216 Q68,202 88,182 Q110,160 140,152 Q148,150 150,150 Q152,151 160,160 L178,175 Q195,190 215,208 L235,225 Q260,243 280,255 L295,259 L300,260 L300,400 L0,400 Z" />
-                <path class="eruption-sim-conduit-outline" d="M133,150 L167,150 L167,294 L133,294 Z" />
-                <path class="eruption-sim-conduit-fill" d="M133,150 L167,150 L167,294 L133,294 Z" />
-                <path class="eruption-sim-chamber-outline" d="M74,294 L226,294 L226,370 L74,370 Z" />
-                <path class="eruption-sim-chamber-fill" d="M74,294 L226,294 L226,370 L74,370 Z" />
+        <h2 data-animation="fade-up">VEI Simulation</h2>
+        <div class="vei-app" data-animation="image-reveal">
+          <header class="vei-hdr">
+            <div class="vei-hdr-title"><span class="vei-mark"></span> VEI — Eruption Simulator</div>
+            <div class="vei-hdr-sub">Volcanic Explosivity Index · illustrative model, not a forecasting tool</div>
+          </header>
 
-                <g class="eruption-sim-bubbles" aria-hidden="true">
-                  <circle class="eruption-sim-bubble" cx="145" cy="292" r="3" />
-                  <circle class="eruption-sim-bubble" cx="156" cy="278" r="4" />
-                  <circle class="eruption-sim-bubble" cx="142" cy="260" r="4.5" />
-                  <circle class="eruption-sim-bubble" cx="158" cy="240" r="5.5" />
-                  <circle class="eruption-sim-bubble" cx="144" cy="218" r="6.5" />
-                  <circle class="eruption-sim-bubble" cx="157" cy="195" r="7.5" />
-                  <circle class="eruption-sim-bubble" cx="148" cy="172" r="8.5" />
-                </g>
-
-                <path class="eruption-sim-flow" d="M150,150 C140,190 120,230 95,258 C80,275 70,290 65,310" />
-
-                <g class="eruption-sim-fume" aria-hidden="true">
-                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
-                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
-                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
-                </g>
-
-                <g class="eruption-sim-burst" aria-hidden="true">
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
-                </g>
-
-                <g class="eruption-sim-burst-smoke" aria-hidden="true">
-                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
-                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
-                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
-                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
-                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
-                </g>
-              </svg>
-              <canvas class="eruption-sim-particles" aria-hidden="true"></canvas>
-            </div>
-
-            <div class="eruption-sim-metrics" aria-live="polite">
-              <div class="eruption-sim-metrics-group eruption-sim-metrics-group-inputs">
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">Viscosity</span>
-                  <span class="eruption-sim-metric-value" id="metric-viscosity">30%</span>
-                </div>
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">Gas content</span>
-                  <span class="eruption-sim-metric-value" id="metric-gas">30%</span>
-                </div>
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">Chamber pressure</span>
-                  <span class="eruption-sim-metric-value" id="metric-pressure">100%</span>
-                </div>
+          <div class="vei-main">
+            <div class="vei-stage-wrap">
+              <div class="vei-stage">
+                <canvas id="scene"></canvas>
+                <div class="vei-stage-readout" id="stageReadout">VEI 0 · Effusive</div>
+                <div class="vei-scale-note" id="scaleNote">House icon at base ≈ fixed real-world scale reference</div>
               </div>
-              <div class="eruption-sim-metrics-group eruption-sim-metrics-group-outputs">
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">Eruption rate</span>
-                  <span class="eruption-sim-metric-value" id="metric-rate">0 m&sup3;/s</span>
-                </div>
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">Column height</span>
-                  <span class="eruption-sim-metric-value" id="metric-column-height">0.0 km</span>
-                </div>
-                <div class="eruption-sim-metric">
-                  <span class="eruption-sim-metric-label">VEI</span>
-                  <span class="eruption-sim-metric-value" id="metric-vei">0</span>
-                </div>
+              <div class="vei-legend">
+                <span><i style="background: var(--magma-core)"></i>Lava</span>
+                <span><i style="background: var(--ash)"></i>Ash &amp; smoke plume</span>
+                <span><i style="background: #b5675a"></i>Pyroclastic flow</span>
+                <span><i style="background: var(--sulfur); opacity: 0.8"></i>Affected radius (illustrative)</span>
               </div>
             </div>
 
-            <p class="eruption-sim-status" id="eruption-status" role="status">Erupting continuously — chamber full</p>
-          </div>
-
-          <div class="eruption-sim-panels">
-            <div class="eruption-sim-panel eruption-sim-panel-parameters">
-              <h3 class="eruption-sim-panel-title">Magma parameters</h3>
-
-              <div class="eruption-sim-control">
-                <label class="eruption-sim-label" for="eruption-viscosity">Magma viscosity</label>
-                <input type="range" id="eruption-viscosity" class="eruption-sim-slider" min="0" max="100" value="30" step="1" aria-describedby="eruption-viscosity-desc" />
-                <output class="eruption-sim-readout" id="eruption-viscosity-readout" for="eruption-viscosity">30%</output>
-                <p class="eruption-sim-control-desc" id="eruption-viscosity-desc">How thick and gas-trapping the magma is — fluid basalt flows freely, thick rhyolite resists and builds pressure.</p>
+            <aside class="vei-panel">
+              <div class="vei-hero">
+                <div class="vei-num" id="veiNum">0</div>
+                <div class="vei-label">
+                  <div class="vei-eyebrow">Volcanic Explosivity Index</div>
+                  <div class="vei-name" id="veiName">Effusive</div>
+                </div>
               </div>
 
-              <div class="eruption-sim-control">
-                <label class="eruption-sim-label" for="eruption-gas">Gas content</label>
-                <input type="range" id="eruption-gas" class="eruption-sim-slider" min="0" max="100" value="30" step="1" aria-describedby="eruption-gas-desc" />
-                <output class="eruption-sim-readout" id="eruption-gas-readout" for="eruption-gas">30%</output>
-                <p class="eruption-sim-control-desc" id="eruption-gas-desc">Dissolved gas trying to escape — the more there is, the more explosively it expands on the way up.</p>
+              <div class="vei-slider-block">
+                <div class="vei-slider-row">
+                  <input
+                    type="range"
+                    id="veiSlider"
+                    min="0"
+                    max="8"
+                    step="1"
+                    value="0"
+                    aria-label="Volcanic Explosivity Index level"
+                  />
+                </div>
+                <div class="vei-scale-ticks" id="ticks"></div>
               </div>
 
-              <button type="button" class="eruption-sim-reset" id="eruption-reset">Reset volcano</button>
-            </div>
+              <div class="vei-desc" id="veiDesc"></div>
 
-            <div class="eruption-sim-panel eruption-sim-panel-style">
-              <h3 class="eruption-sim-panel-title">Eruption style</h3>
-              <div class="eruption-sim-style-tabs" role="group" aria-label="Eruption style">
-                <button type="button" class="eruption-sim-style-tab is-active" aria-pressed="true" data-style="effusive">Effusive</button>
-                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="hawaiian">Hawaiian</button>
-                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="strombolian">Strombolian</button>
-                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="vulcanian">Vulcanian</button>
-                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="plinian">Plinian</button>
+              <div class="vei-stats">
+                <div class="vei-stat">
+                  <div class="vei-k">Plume height</div>
+                  <div class="vei-v" id="statHeight">—</div>
+                </div>
+                <div class="vei-stat">
+                  <div class="vei-k">Affected radius</div>
+                  <div class="vei-v" id="statRadius">—</div>
+                </div>
+                <div class="vei-stat">
+                  <div class="vei-k">Erupted volume</div>
+                  <div class="vei-v" id="statVolume">—</div>
+                </div>
+                <div class="vei-stat">
+                  <div class="vei-k">Recurrence</div>
+                  <div class="vei-v" id="statFreq">—</div>
+                </div>
               </div>
-              <p class="eruption-sim-style-desc" id="eruption-style-desc">Gentle, continuous lava effusion with almost no explosivity — long-lived shield-building flows.</p>
-              <button type="button" class="eruption-sim-erupt" id="eruption-erupt">Trigger eruption</button>
-            </div>
+
+              <div class="vei-example" id="veiExample"></div>
+
+              <div class="vei-footnote">
+                Heights, radii and volumes are simplified, log-scaled approximations meant to convey relative order of
+                magnitude between VEI levels — not precise figures for any single eruption.
+              </div>
+            </aside>
           </div>
         </div>
       </section>
@@ -234,6 +905,86 @@
             </p>
             <p class="feature-card-danger" data-danger="extreme"><strong>Danger: Extreme</strong> (VEI 4–8) — needs very high viscosity and very high gas content sustained under extreme pressure.</p>
           </article>
+        </div>
+
+        <h3 data-animation="fade-up">Try the eruption style spectrum</h3>
+        <div class="es-app" data-animation="image-reveal">
+          <header class="es-hdr">
+            <div class="es-hdr-title"><span class="es-mark"></span> Eruption Style Spectrum</div>
+            <div class="es-hdr-sub">Hawaiian &rarr; Strombolian &rarr; Vulcanian &rarr; Sub-Plinian &rarr; Plinian &middot; illustrative model</div>
+          </header>
+
+          <div class="es-main">
+            <div class="es-stage-wrap">
+              <div class="es-stage">
+                <canvas id="esScene"></canvas>
+                <div class="es-stage-readout" id="esStageReadout">Hawaiian</div>
+                <div class="es-vent-state" id="esVentState" style="opacity: 0"></div>
+                <div class="es-stage-note">House icon at base &asymp; fixed real-world scale reference</div>
+              </div>
+              <div class="es-legend">
+                <span><i style="background: var(--magma-core)"></i>Lava</span>
+                <span><i style="background: var(--ash)"></i>Ash column</span>
+                <span><i style="background: #b5675a"></i>Pyroclastic density current</span>
+                <span><i style="background: #7d8a94"></i>Umbrella cloud</span>
+                <span><i style="background: var(--sulfur); opacity: 0.8"></i>Affected radius (illustrative)</span>
+              </div>
+            </div>
+
+            <aside class="es-panel">
+              <div class="es-stage-rail" id="esStageRail"></div>
+
+              <div class="es-hero">
+                <div class="es-eyebrow" id="esStageEyebrow">Stage 1 of 5</div>
+                <div class="es-name" id="esStyleName">Hawaiian</div>
+                <div class="es-subname" id="esStyleTagline">Effusive &middot; low-viscosity basalt</div>
+              </div>
+
+              <div class="es-slider-block">
+                <input
+                  type="range"
+                  id="esStyleSlider"
+                  min="0"
+                  max="4"
+                  step="1"
+                  value="0"
+                  aria-label="Eruption style, from Hawaiian to Plinian"
+                />
+                <div class="es-scale-ticks" id="esTicks"></div>
+              </div>
+
+              <div class="es-desc" id="esStyleDesc"></div>
+
+              <div class="es-stats">
+                <div class="es-stat">
+                  <div class="es-k">Column behaviour</div>
+                  <div class="es-v" id="esStatColumn">&mdash;</div>
+                </div>
+                <div class="es-stat">
+                  <div class="es-k">Magma viscosity</div>
+                  <div class="es-v" id="esStatViscosity">&mdash;</div>
+                </div>
+                <div class="es-stat">
+                  <div class="es-k">Gas content</div>
+                  <div class="es-v" id="esStatGas">&mdash;</div>
+                </div>
+                <div class="es-stat">
+                  <div class="es-k">Affected radius</div>
+                  <div class="es-v" id="esStatRadius">&mdash;</div>
+                </div>
+                <div class="es-stat es-wide">
+                  <div class="es-k">Typical duration / recurrence</div>
+                  <div class="es-v" id="esStatDuration">&mdash;</div>
+                </div>
+              </div>
+
+              <div class="es-example" id="esStyleExample"></div>
+
+              <div class="es-footnote">
+                These five categories describe eruption style &mdash; how magma viscosity and gas content shape behaviour &mdash; not a strict numeric scale. Real eruptions can shift between styles over their lifetime. Heights, radii and timings are simplified, illustrative approximations.
+              </div>
+            </aside>
+          </div>
         </div>
       </section>
       <section>
@@ -296,6 +1047,1364 @@
       <p>Volcano eruption photograph via <a href="https://www.britannica.com/story/what-causes-a-volcano-to-erupt">Encyclopedia Britannica</a>, "Eruption of a volcano near Antigua, Guatemala."</p>
     </footer>
     <script type="module" src="./main.ts"></script>
+    <!-- VEI eruption simulator behaviour (#underground-process), kept as a
+         plain classic script alongside its markup/styles rather than a Vite
+         module — see the <style> block above for why. IIFE-scoped so it
+         never touches the module graph the rest of the site uses. -->
+    <script>
+      (function () {
+        "use strict";
+
+        const VEI_DATA = [
+          {
+            level: 0,
+            name: "Effusive",
+            eg: "Kīlauea, Hawai'i (ongoing)",
+            height: "< 100 m",
+            radius: "~1 km",
+            volume: "< 10,000 m³ / day",
+            freq: "Continuous",
+            desc: "<b>Effusive</b> activity. Lava flows gently from vents with almost no explosive force — fountains, not blasts.",
+            plumeKm: 0.08,
+            plumeFrac: 0.1,
+            ashDensity: 0.02,
+            lavaIntensity: 1.0,
+            pyroclastic: 0,
+            shake: 0,
+            radiusKm: 1,
+            darken: 0,
+          },
+          {
+            level: 1,
+            name: "Gentle",
+            eg: "Stromboli, Italy",
+            height: "0.1 – 1 km",
+            radius: "~5 km",
+            volume: "~10⁴ m³",
+            freq: "Daily–weekly",
+            desc: "<b>Gentle</b> bursts. Small explosions throw ash and bombs a short distance above the crater every few minutes.",
+            plumeKm: 0.6,
+            plumeFrac: 0.18,
+            ashDensity: 0.12,
+            lavaIntensity: 0.85,
+            pyroclastic: 0,
+            shake: 0,
+            radiusKm: 5,
+            darken: 0.02,
+          },
+          {
+            level: 2,
+            name: "Explosive",
+            eg: "Galeras, Colombia (1992)",
+            height: "1 – 5 km",
+            radius: "~15 km",
+            volume: "~10⁶ m³",
+            freq: "~Every 2 weeks (globally)",
+            desc: "<b>Explosive</b>. A visible ash column forms and local ashfall begins to affect nearby slopes.",
+            plumeKm: 3,
+            plumeFrac: 0.32,
+            ashDensity: 0.28,
+            lavaIntensity: 0.6,
+            pyroclastic: 0,
+            shake: 0,
+            radiusKm: 15,
+            darken: 0.05,
+          },
+          {
+            level: 3,
+            name: "Severe",
+            eg: "Nevado del Ruiz, Colombia (1985)",
+            height: "3 – 15 km",
+            radius: "~40 km",
+            volume: "~10⁷ m³",
+            freq: "~3× per year",
+            desc: "<b>Severe</b>. Sustained eruption column reaches the upper troposphere; regional ashfall and lahars become likely.",
+            plumeKm: 9,
+            plumeFrac: 0.5,
+            ashDensity: 0.42,
+            lavaIntensity: 0.45,
+            pyroclastic: 0.15,
+            shake: 0.05,
+            radiusKm: 40,
+            darken: 0.1,
+          },
+          {
+            level: 4,
+            name: "Cataclysmic",
+            eg: "Eyjafjallajökull, Iceland (2010)",
+            height: "10 – 25 km",
+            radius: "~100 km",
+            volume: "~10⁸ m³",
+            freq: "~1× per year",
+            desc: "<b>Cataclysmic</b>. Column punches into the stratosphere. Pyroclastic flows race down the flanks; air travel can be disrupted continent-wide.",
+            plumeKm: 18,
+            plumeFrac: 0.68,
+            ashDensity: 0.55,
+            lavaIntensity: 0.3,
+            pyroclastic: 0.4,
+            shake: 0.15,
+            radiusKm: 100,
+            darken: 0.18,
+          },
+          {
+            level: 5,
+            name: "Paroxysmal",
+            eg: "Mount St. Helens, USA (1980)",
+            height: "> 25 km",
+            radius: "~300 km",
+            volume: "~10⁹ m³",
+            freq: "~Every 12 years",
+            desc: "<b>Paroxysmal</b>. Violent lateral blasts and major pyroclastic flows. Ash reaches the stratosphere and spreads for hundreds of kilometres.",
+            plumeKm: 25,
+            plumeFrac: 0.82,
+            ashDensity: 0.68,
+            lavaIntensity: 0.22,
+            pyroclastic: 0.65,
+            shake: 0.3,
+            radiusKm: 300,
+            darken: 0.28,
+          },
+          {
+            level: 6,
+            name: "Colossal",
+            eg: "Pinatubo, Philippines (1991)",
+            height: "> 25 km",
+            radius: "~800 km",
+            volume: "~10¹⁰ m³",
+            freq: "~Every 50–100 years",
+            desc: "<b>Colossal</b>. Enough sulfate aerosol reaches the stratosphere to measurably cool the planet for a year or more.",
+            plumeKm: 30,
+            plumeFrac: 0.94,
+            ashDensity: 0.8,
+            lavaIntensity: 0.15,
+            pyroclastic: 0.8,
+            shake: 0.45,
+            radiusKm: 800,
+            darken: 0.42,
+          },
+          {
+            level: 7,
+            name: "Super-colossal",
+            eg: "Tambora, Indonesia (1815)",
+            height: "> 25 km",
+            radius: "~2,000 km",
+            volume: "~10¹¹ m³",
+            freq: "~Every 500–1000 years",
+            desc: '<b>Super-colossal</b>. Historically linked to the 1816 "Year Without a Summer" — global crop failure from ash and aerosol veiling the sun.',
+            plumeKm: 34,
+            plumeFrac: 1.0,
+            ashDensity: 0.92,
+            lavaIntensity: 0.1,
+            pyroclastic: 0.92,
+            shake: 0.65,
+            radiusKm: 2000,
+            darken: 0.58,
+          },
+          {
+            level: 8,
+            name: "Mega-colossal",
+            eg: "Yellowstone caldera (~640,000 yrs ago)",
+            height: "> 25 km, caldera-forming",
+            radius: "Continental / global",
+            volume: "≥ 10¹² m³",
+            freq: "~Every 50,000+ years",
+            desc: "<b>Mega-colossal</b>. A supervolcanic event. The chamber empties fast enough that the summit collapses into a caldera; effects are felt worldwide.",
+            plumeKm: 38,
+            plumeFrac: 1.0,
+            ashDensity: 1.0,
+            lavaIntensity: 0.05,
+            pyroclastic: 1.0,
+            shake: 1.0,
+            radiusKm: 5000,
+            darken: 0.72,
+          },
+        ];
+
+        const state = {
+          veiIndex: 0,
+          current: { plumeFrac: 0.1, ashDensity: 0.02, lavaIntensity: 1, pyroclastic: 0, shake: 0, darken: 0 },
+          target: { plumeFrac: 0.1, ashDensity: 0.02, lavaIntensity: 1, pyroclastic: 0, shake: 0, darken: 0 },
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        };
+
+        function setTargetFromVEI(i) {
+          const d = VEI_DATA[i];
+          state.target.plumeFrac = d.plumeFrac;
+          state.target.ashDensity = d.ashDensity;
+          state.target.lavaIntensity = d.lavaIntensity;
+          state.target.pyroclastic = d.pyroclastic;
+          state.target.shake = d.shake;
+          state.target.darken = d.darken;
+        }
+
+        const canvas = document.getElementById("scene");
+        const ctx = canvas.getContext("2d");
+        let W = 0,
+          H = 0;
+        const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+        function resize() {
+          const rect = canvas.parentElement.getBoundingClientRect();
+          W = Math.max(200, rect.width);
+          H = Math.max(200, rect.height);
+          canvas.width = W * DPR;
+          canvas.height = H * DPR;
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        window.addEventListener("resize", resize);
+
+        const Terrain = {
+          groundY: 0,
+          coneBaseW: 0,
+          coneApexX: 0,
+          coneApexY: 0,
+          craterY: 0,
+          hillsSeed: [],
+
+          layout() {
+            this.groundY = H * 0.82;
+            this.coneApexX = W * 0.5;
+            this.coneApexY = H * 0.22;
+            this.coneBaseW = W * 0.46;
+            this.craterY = this.coneApexY + (this.groundY - this.coneApexY) * 0.06;
+            if (this.hillsSeed.length === 0) {
+              for (let i = 0; i < 24; i++) this.hillsSeed.push(Math.random());
+            }
+          },
+
+          drawSky(darken) {
+            const g = ctx.createLinearGradient(0, 0, 0, this.groundY);
+            g.addColorStop(0, mix("#1c2733", "#241d1c", darken));
+            g.addColorStop(0.55, mix("#3a4a5c", "#3a2f28", darken));
+            g.addColorStop(1, mix("#5c7284", "#4a3f37", darken));
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, this.groundY + 2);
+
+            if (darken > 0.02) {
+              ctx.fillStyle = `rgba(30,20,15,${darken * 0.5})`;
+              ctx.fillRect(0, 0, W, H);
+            }
+          },
+
+          drawFarHills() {
+            ctx.fillStyle = "#33424f";
+            ctx.beginPath();
+            ctx.moveTo(0, this.groundY);
+            for (let i = 0; i <= 10; i++) {
+              const x = (W / 10) * i;
+              const y = this.groundY - 14 - this.hillsSeed[i] * 22;
+              ctx.lineTo(x, y);
+            }
+            ctx.lineTo(W, this.groundY);
+            ctx.closePath();
+            ctx.fill();
+          },
+
+          drawGround() {
+            ctx.fillStyle = "#3d3128";
+            ctx.fillRect(0, this.groundY, W, H - this.groundY);
+            ctx.fillStyle = "rgba(0,0,0,0.08)";
+            for (let i = 0; i < 6; i++) {
+              ctx.fillRect(0, this.groundY + i * ((H - this.groundY) / 6), W, 2);
+            }
+          },
+
+          leftSlopePoint(t) {
+            return {
+              x: lerp(this.coneApexX - this.coneBaseW / 2, this.coneApexX, t),
+              y: lerp(this.groundY, this.coneApexY, t),
+            };
+          },
+          rightSlopePoint(t) {
+            return {
+              x: lerp(this.coneApexX + this.coneBaseW / 2, this.coneApexX, t),
+              y: lerp(this.groundY, this.coneApexY, t),
+            };
+          },
+
+          drawCone(lavaGlow) {
+            const apex = { x: this.coneApexX, y: this.coneApexY };
+            const baseL = { x: this.coneApexX - this.coneBaseW / 2, y: this.groundY };
+            const baseR = { x: this.coneApexX + this.coneBaseW / 2, y: this.groundY };
+
+            const g = ctx.createLinearGradient(0, apex.y, 0, this.groundY);
+            g.addColorStop(0, "#5c4738");
+            g.addColorStop(0.5, "#4a372a");
+            g.addColorStop(1, "#241b16");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(apex.x, apex.y);
+            ctx.lineTo(baseR.x, baseR.y);
+            ctx.lineTo(baseL.x, baseL.y);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#1a120e";
+            ctx.beginPath();
+            ctx.moveTo(apex.x - 14, this.craterY);
+            ctx.lineTo(apex.x, apex.y + 10);
+            ctx.lineTo(apex.x + 14, this.craterY);
+            ctx.closePath();
+            ctx.fill();
+
+            if (lavaGlow > 0.03) {
+              const grad = ctx.createRadialGradient(
+                apex.x,
+                this.craterY,
+                1,
+                apex.x,
+                this.craterY,
+                26 + lavaGlow * 20,
+              );
+              grad.addColorStop(0, `rgba(255,178,56,${0.55 * lavaGlow})`);
+              grad.addColorStop(1, "rgba(255,90,31,0)");
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.arc(apex.x, this.craterY, 26 + lavaGlow * 20, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            ctx.strokeStyle = "rgba(233,228,218,0.08)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(apex.x, apex.y);
+            ctx.lineTo(baseL.x, baseL.y);
+            ctx.stroke();
+          },
+
+          drawScaleHouse() {
+            const bx = this.coneApexX + this.coneBaseW * 0.62;
+            const by = this.groundY;
+            const s = 9;
+            ctx.fillStyle = "#efe6d3";
+            ctx.fillRect(bx - s, by - s * 1.1, s * 2, s * 1.1);
+            ctx.fillStyle = "#8b3a2b";
+            ctx.beginPath();
+            ctx.moveTo(bx - s - 2, by - s * 1.1);
+            ctx.lineTo(bx, by - s * 2.1);
+            ctx.lineTo(bx + s + 2, by - s * 1.1);
+            ctx.closePath();
+            ctx.fill();
+          },
+        };
+
+        const LavaFlows = {
+          streams: [0.3, 0.5, 0.68],
+          t: 0,
+
+          update(dt) {
+            this.t += dt;
+          },
+
+          draw(intensity) {
+            if (intensity <= 0.02) return;
+            ctx.save();
+            this.streams.forEach((offset, i) => {
+              const top = { x: lerp(Terrain.coneApexX - 6, Terrain.coneApexX + 6, offset * 0 + 0.5), y: Terrain.craterY };
+              const baseX = lerp(
+                Terrain.coneApexX - Terrain.coneBaseW * 0.42,
+                Terrain.coneApexX + Terrain.coneBaseW * 0.42,
+                offset,
+              );
+              const baseY = Terrain.groundY - 2;
+
+              const wobble = Math.sin(this.t * 1.4 + i * 2) * 6 * intensity;
+              ctx.strokeStyle = `rgba(255,${Math.floor(90 + 70 * intensity)},${Math.floor(20 + 20 * intensity)},${0.55 + 0.35 * intensity})`;
+              ctx.lineWidth = 3 + intensity * 5;
+              ctx.lineCap = "round";
+              ctx.beginPath();
+              ctx.moveTo(top.x, top.y + 4);
+              ctx.quadraticCurveTo((top.x + baseX) / 2 + wobble, (top.y + baseY) / 2, baseX, baseY);
+              ctx.stroke();
+
+              ctx.strokeStyle = `rgba(255,205,120,${0.5 * intensity})`;
+              ctx.lineWidth = 1.2 + intensity * 2;
+              ctx.stroke();
+            });
+            ctx.restore();
+          },
+        };
+
+        function makeParticlePool(max) {
+          return new Array(max).fill(null);
+        }
+
+        const EruptionColumn = {
+          particles: makeParticlePool(420),
+          spawnAccum: 0,
+          _maxHeightPx: 0,
+
+          reset() {
+            this.particles.fill(null);
+          },
+
+          spawnRate(ashDensity) {
+            return 4 + ashDensity * 70;
+          },
+
+          update(dt, ashDensity, plumeFrac, reduced) {
+            const ventX = Terrain.coneApexX;
+            const ventY = Terrain.craterY;
+            const maxHeightPx = (Terrain.groundY - 40) * plumeFrac;
+            const rateMul = reduced ? 0.35 : 1;
+
+            this.spawnAccum += dt * this.spawnRate(ashDensity) * rateMul;
+            while (this.spawnAccum >= 1) {
+              this.spawnAccum -= 1;
+              this._spawn(ventX, ventY, ashDensity);
+            }
+
+            for (let i = 0; i < this.particles.length; i++) {
+              const p = this.particles[i];
+              if (!p) continue;
+              p.age += dt;
+              const lifeT = p.age / p.life;
+              if (lifeT >= 1) {
+                this.particles[i] = null;
+                continue;
+              }
+
+              const riseEase = 1 - Math.pow(1 - Math.min(1, lifeT * 1.4), 2);
+              p.y = ventY - riseEase * p.riseTarget;
+              const spread = Math.pow(lifeT, 0.7) * p.spreadTarget;
+              p.x = p.baseX + Math.sin(p.phase + p.age * 0.6) * 4 + spread * p.dir;
+              p.r = p.r0 * (0.6 + lifeT * 1.0);
+              p.alpha = p.a0 * (lifeT < 0.15 ? lifeT / 0.15 : 1 - lifeT);
+            }
+
+            this._maxHeightPx = maxHeightPx;
+          },
+
+          _spawn(ventX, ventY, ashDensity) {
+            const idx = this.particles.findIndex((p) => p === null);
+            if (idx === -1) return;
+            const maxHeightPx = (Terrain.groundY - 40) * state.current.plumeFrac;
+            const dir = Math.random() < 0.5 ? -1 : 1;
+            this.particles[idx] = {
+              baseX: ventX + (Math.random() - 0.5) * 10,
+              y: ventY,
+              x: ventX,
+              phase: Math.random() * 10,
+              age: 0,
+              life: 3.2 + Math.random() * 2.6,
+              riseTarget: maxHeightPx * (0.55 + Math.random() * 0.5),
+              spreadTarget: (20 + maxHeightPx * 0.55) * (0.5 + Math.random() * 0.8),
+              dir,
+              r0: 10 + Math.random() * 16 + ashDensity * 14,
+              r: 0,
+              a0: 0.35 + Math.random() * 0.25,
+              alpha: 0,
+              dark: Math.random(),
+            };
+          },
+
+          draw(ashDensity) {
+            ctx.save();
+            for (const p of this.particles) {
+              if (!p) continue;
+              const shade = Math.floor(lerp(150, 60, ashDensity * 0.7 + p.dark * 0.3));
+              ctx.fillStyle = `rgba(${shade},${shade - 6},${shade - 14},${p.alpha})`;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          },
+
+          drawFountain(lavaIntensity, t) {
+            if (lavaIntensity < 0.05) return;
+            const ventX = Terrain.coneApexX;
+            const ventY = Terrain.craterY;
+            ctx.save();
+            for (let i = 0; i < 10; i++) {
+              const seed = i * 13.7;
+              const phase = (t * 1.8 + seed) % 1;
+              const h = phase * 34 * lavaIntensity;
+              const x = ventX + Math.sin(seed) * 10 * phase;
+              const y = ventY - h;
+              ctx.fillStyle = `rgba(255,${180 - Math.floor(phase * 90)},${60},${(1 - phase) * 0.85})`;
+              ctx.beginPath();
+              ctx.arc(x, y, 2.4 * (1 - phase * 0.6), 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          },
+        };
+
+        const PyroclasticFlow = {
+          t: 0,
+          update(dt) {
+            this.t += dt;
+          },
+          draw(intensity) {
+            if (intensity <= 0.02) return;
+            const baseY = Terrain.groundY;
+            const reach = intensity * Terrain.coneBaseW * 1.35;
+            const pulse = 1 + Math.sin(this.t * 1.6) * 0.03 * intensity;
+
+            ctx.save();
+            const g = ctx.createRadialGradient(Terrain.coneApexX, baseY, 4, Terrain.coneApexX, baseY, reach * pulse);
+            g.addColorStop(0, `rgba(120,90,80,${0.55 * intensity})`);
+            g.addColorStop(0.6, `rgba(90,75,72,${0.42 * intensity})`);
+            g.addColorStop(1, "rgba(80,70,68,0)");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.ellipse(Terrain.coneApexX, baseY, reach * pulse, reach * pulse * 0.3, 0, Math.PI, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          },
+        };
+
+        const RadiusRing = {
+          draw(radiusKm) {
+            const minKm = 1,
+              maxKm = 5000;
+            const minPx = 26,
+              maxPx = Math.min(W, H * 1.6) * 0.6;
+            const t = Math.log(radiusKm / minKm) / Math.log(maxKm / minKm);
+            const px = lerp(minPx, maxPx, Math.max(0, Math.min(1, t)));
+
+            ctx.save();
+            ctx.strokeStyle = "rgba(217,194,92,0.55)";
+            ctx.setLineDash([6, 6]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.ellipse(Terrain.coneApexX, Terrain.groundY, px, px * 0.34, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          },
+        };
+
+        const Shake = {
+          x: 0,
+          y: 0,
+          update(intensity) {
+            if (intensity <= 0.01) {
+              this.x = 0;
+              this.y = 0;
+              return;
+            }
+            const mag = intensity * 5;
+            this.x = (Math.random() - 0.5) * mag;
+            this.y = (Math.random() - 0.5) * mag;
+          },
+        };
+
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function approach(cur, target, rate, dt) {
+          const diff = target - cur;
+          const step = diff * Math.min(1, rate * dt);
+          return Math.abs(diff) < 0.0005 ? target : cur + step;
+        }
+        function hexToRgb(hex) {
+          const v = hex.replace("#", "");
+          const n = parseInt(v.length === 3 ? v.split("").map((c) => c + c).join("") : v, 16);
+          return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        }
+        function mix(hexA, hexB, t) {
+          const a = hexToRgb(hexA),
+            b = hexToRgb(hexB);
+          const r = Math.round(lerp(a[0], b[0], t));
+          const g = Math.round(lerp(a[1], b[1], t));
+          const bch = Math.round(lerp(a[2], b[2], t));
+          return `rgb(${r},${g},${bch})`;
+        }
+
+        let lastTime = performance.now();
+
+        function frame(now) {
+          const dt = Math.min(0.05, (now - lastTime) / 1000);
+          lastTime = now;
+
+          const approachRate = 1.6;
+          for (const k of Object.keys(state.current)) {
+            state.current[k] = approach(state.current[k], state.target[k], approachRate, dt);
+          }
+
+          LavaFlows.update(dt);
+          PyroclasticFlow.update(dt);
+          EruptionColumn.update(dt, state.current.ashDensity, state.current.plumeFrac, state.reducedMotion);
+          Shake.update(state.current.shake);
+
+          ctx.save();
+          ctx.clearRect(0, 0, W, H);
+          ctx.translate(Shake.x, Shake.y);
+
+          Terrain.drawSky(state.current.darken);
+          Terrain.drawFarHills();
+          RadiusRing.draw(VEI_DATA[state.veiIndex].radiusKm);
+          Terrain.drawGround();
+          Terrain.drawScaleHouse();
+          PyroclasticFlow.draw(state.current.pyroclastic);
+          Terrain.drawCone(state.current.lavaIntensity);
+          LavaFlows.draw(state.current.lavaIntensity);
+          EruptionColumn.drawFountain(state.current.lavaIntensity, LavaFlows.t);
+          EruptionColumn.draw(state.current.ashDensity);
+
+          ctx.restore();
+
+          requestAnimationFrame(frame);
+        }
+
+        const UI = {
+          slider: document.getElementById("veiSlider"),
+          veiNum: document.getElementById("veiNum"),
+          veiName: document.getElementById("veiName"),
+          veiDesc: document.getElementById("veiDesc"),
+          veiExample: document.getElementById("veiExample"),
+          statHeight: document.getElementById("statHeight"),
+          statRadius: document.getElementById("statRadius"),
+          statVolume: document.getElementById("statVolume"),
+          statFreq: document.getElementById("statFreq"),
+          stageReadout: document.getElementById("stageReadout"),
+          ticksEl: document.getElementById("ticks"),
+
+          initTicks() {
+            this.ticksEl.innerHTML = VEI_DATA.map((d) => `<span data-i="${d.level}">${d.level}</span>`).join("");
+          },
+
+          applyLevel(i) {
+            const d = VEI_DATA[i];
+            state.veiIndex = i;
+            setTargetFromVEI(i);
+
+            this.veiNum.textContent = d.level;
+            this.veiName.textContent = d.name;
+            this.veiDesc.innerHTML = d.desc;
+            this.veiExample.innerHTML = `<b>Reference:</b> ${d.eg}`;
+            this.statHeight.textContent = d.height;
+            this.statRadius.textContent = d.radius;
+            this.statVolume.textContent = d.volume;
+            this.statFreq.textContent = d.freq;
+            this.stageReadout.textContent = `VEI ${d.level} · ${d.name}`;
+
+            [...this.ticksEl.children].forEach((el) => {
+              el.classList.toggle("active", Number(el.dataset.i) === i);
+            });
+          },
+
+          bind() {
+            this.slider.addEventListener("input", (e) => {
+              this.applyLevel(Number(e.target.value));
+            });
+          },
+        };
+
+        function init() {
+          resize();
+          Terrain.layout();
+          window.addEventListener("resize", () => {
+            resize();
+            Terrain.layout();
+          });
+
+          UI.initTicks();
+          UI.bind();
+          UI.applyLevel(0);
+          state.current = Object.assign({}, state.target);
+
+          requestAnimationFrame(frame);
+        }
+
+        init();
+      })();
+    </script>
+    <!-- Eruption Style Spectrum behaviour (#features), same rationale as the
+         VEI script above: plain classic script, IIFE-scoped so its locals
+         never collide with the VEI widget's identically-named modules. -->
+    <script>
+      (function () {
+        "use strict";
+
+        const STYLE_DATA = [
+          {
+            key: "hawaiian",
+            name: "Hawaiian",
+            tagline: "Effusive · low-viscosity basalt",
+            eg: "Kīlauea & Mauna Loa, Hawai'i",
+            desc: "<b>Hawaiian</b> eruptions come from very fluid basaltic magma that lets gas escape easily. The result is gentle lava fountains and rivers of lava rather than explosions.",
+            column: "Negligible — fountains only, rarely above 100 m",
+            viscosity: "Very low — flows freely",
+            gas: "Escapes easily, little pressure buildup",
+            duration: "Can flow continuously for days to years",
+            radiusKm: 2,
+            plumeFracBase: 0.12,
+            ashDensityBase: 0.05,
+            lavaIntensityBase: 1,
+            pyroclasticBase: 0,
+            shakeBase: 0,
+            darkenBase: 0,
+            pulseType: "continuous",
+            umbrella: false,
+          },
+          {
+            key: "strombolian",
+            name: "Strombolian",
+            tagline: "Mildly explosive · rhythmic bursts",
+            eg: "Stromboli, Italy · Yasur, Vanuatu",
+            desc: "<b>Strombolian</b> eruptions come from moderately viscous magma that traps gas until it releases in short, separated bursts — often every few minutes — throwing incandescent bombs a few hundred metres up.",
+            column: "100–500 m, in discrete rhythmic bursts",
+            viscosity: "Low–moderate",
+            gas: "Builds up between bursts, then releases sharply",
+            duration: "Bursts every few minutes, can persist for decades",
+            radiusKm: 8,
+            plumeFracBase: 0.26,
+            ashDensityBase: 0.16,
+            lavaIntensityBase: 0.55,
+            pyroclasticBase: 0,
+            shakeBase: 0.05,
+            darkenBase: 0.02,
+            pulseType: "strombolian",
+            umbrella: false,
+          },
+          {
+            key: "vulcanian",
+            name: "Vulcanian",
+            tagline: "Violently explosive · plug failure",
+            eg: "Sakurajima, Japan · Tavurvur, Papua New Guinea",
+            desc: "<b>Vulcanian</b> eruptions happen when a plug of viscous, cooled magma seals the vent. Pressure builds beneath it until the plug fails all at once, launching an ash-laden blast and ballistic blocks within seconds.",
+            column: "1–5 km, in sudden violent pulses",
+            viscosity: "Moderate–high, forms a solid plug",
+            gas: "Builds up under pressure, then explodes free",
+            duration: "Discrete blasts, minutes to hours apart",
+            radiusKm: 20,
+            plumeFracBase: 0.44,
+            ashDensityBase: 0.4,
+            lavaIntensityBase: 0.22,
+            pyroclasticBase: 0.12,
+            shakeBase: 0.2,
+            darkenBase: 0.08,
+            pulseType: "vulcanian",
+            umbrella: false,
+          },
+          {
+            key: "subplinian",
+            name: "Sub-Plinian",
+            tagline: "Sustained & explosive · surging column",
+            eg: "Soufrière Hills, Montserrat (1997) · Eyjafjallajökull, Iceland (2010)",
+            desc: "<b>Sub-Plinian</b> eruptions sustain a tall, turbulent column driven by viscous, gas-rich magma. Ash reaches the upper troposphere in surges, and pyroclastic density currents become common on the flanks.",
+            column: "10–20 km, sustained with strong surges",
+            viscosity: "High",
+            gas: "Very high, drives a near-continuous jet",
+            duration: "Sustained for hours, can recur over weeks",
+            radiusKm: 90,
+            plumeFracBase: 0.66,
+            ashDensityBase: 0.58,
+            lavaIntensityBase: 0.12,
+            pyroclasticBase: 0.5,
+            shakeBase: 0.25,
+            darkenBase: 0.2,
+            pulseType: "sustained-surge",
+            umbrella: true,
+          },
+          {
+            key: "plinian",
+            name: "Plinian",
+            tagline: "Cataclysmic · stratospheric column",
+            eg: "Mount Vesuvius, Italy (79 CE) · Mount Pinatubo, Philippines (1991)",
+            desc: "<b>Plinian</b> eruptions drive a powerful, continuous jet of gas and ash into the stratosphere for hours, spreading into a vast umbrella cloud that can blanket entire regions in ash and collapse the summit into a caldera.",
+            column: "> 25 km, sustained continuously for hours",
+            viscosity: "Very high, gas-rich silicic magma",
+            gas: "Extreme — drives a sustained stratospheric jet",
+            duration: "Hours to a day; recurs over centuries to millennia",
+            radiusKm: 400,
+            plumeFracBase: 0.98,
+            ashDensityBase: 0.88,
+            lavaIntensityBase: 0.04,
+            pyroclasticBase: 0.82,
+            shakeBase: 0.4,
+            darkenBase: 0.4,
+            pulseType: "continuous-strong",
+            umbrella: true,
+          },
+        ];
+
+        const state = {
+          styleIndex: 0,
+          clock: 0,
+          envelope: 0.2,
+          prevEnvelope: 0.2,
+          current: { plumeFrac: 0.12, ashDensity: 0.05, lavaIntensity: 1, pyroclastic: 0, shake: 0, darken: 0 },
+          target: { plumeFrac: 0.12, ashDensity: 0.05, lavaIntensity: 1, pyroclastic: 0, shake: 0, darken: 0 },
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        };
+
+        function setTargetFromStyle(i) {
+          const d = STYLE_DATA[i];
+          state.target.plumeFrac = d.plumeFracBase;
+          state.target.ashDensity = d.ashDensityBase;
+          state.target.lavaIntensity = d.lavaIntensityBase;
+          state.target.pyroclastic = d.pyroclasticBase;
+          state.target.shake = d.shakeBase;
+          state.target.darken = d.darkenBase;
+        }
+
+        function computeEnvelope(pulseType, t) {
+          switch (pulseType) {
+            case "continuous":
+              return 1;
+            case "strombolian": {
+              const period = 3;
+              const frac = (t % period) / period;
+              const spike = Math.exp(-Math.pow((frac - 0.04) * 16, 2)) * 1.5;
+              return 0.12 + spike;
+            }
+            case "vulcanian": {
+              const period = 6;
+              const frac = (t % period) / period;
+              const spike = Math.exp(-Math.pow((frac - 0.86) * 26, 2)) * 1.7;
+              return 0.06 + spike;
+            }
+            case "sustained-surge":
+              return 0.75 + Math.sin(t * 0.9) * 0.3 + Math.sin(t * 2.3) * 0.08;
+            case "continuous-strong":
+              return 1.05 + Math.sin(t * 2.1) * 0.08 + Math.sin(t * 5.3) * 0.04;
+            default:
+              return 1;
+          }
+        }
+
+        const canvas = document.getElementById("esScene");
+        const ctx = canvas.getContext("2d");
+        let W = 0;
+        let H = 0;
+        const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+        function resize() {
+          const rect = canvas.parentElement.getBoundingClientRect();
+          W = Math.max(200, rect.width);
+          H = Math.max(200, rect.height);
+          canvas.width = W * DPR;
+          canvas.height = H * DPR;
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        const Terrain = {
+          groundY: 0,
+          coneBaseW: 0,
+          coneApexX: 0,
+          coneApexY: 0,
+          craterY: 0,
+          hillsSeed: [],
+          layout() {
+            this.groundY = H * 0.82;
+            this.coneApexX = W * 0.5;
+            this.coneApexY = H * 0.22;
+            this.coneBaseW = W * 0.46;
+            this.craterY = this.coneApexY + (this.groundY - this.coneApexY) * 0.06;
+            if (this.hillsSeed.length === 0) for (let i = 0; i < 24; i++) this.hillsSeed.push(Math.random());
+          },
+          drawSky(darken) {
+            const g = ctx.createLinearGradient(0, 0, 0, this.groundY);
+            g.addColorStop(0, mix("#1c2733", "#241d1c", darken));
+            g.addColorStop(0.55, mix("#3a4a5c", "#3a2f28", darken));
+            g.addColorStop(1, mix("#5c7284", "#4a3f37", darken));
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, this.groundY + 2);
+            if (darken > 0.02) {
+              ctx.fillStyle = `rgba(30,20,15,${darken * 0.5})`;
+              ctx.fillRect(0, 0, W, H);
+            }
+          },
+          drawFarHills() {
+            ctx.fillStyle = "#33424f";
+            ctx.beginPath();
+            ctx.moveTo(0, this.groundY);
+            for (let i = 0; i <= 10; i++) {
+              const x = (W / 10) * i;
+              const y = this.groundY - 14 - this.hillsSeed[i] * 22;
+              ctx.lineTo(x, y);
+            }
+            ctx.lineTo(W, this.groundY);
+            ctx.closePath();
+            ctx.fill();
+          },
+          drawGround() {
+            ctx.fillStyle = "#3d3128";
+            ctx.fillRect(0, this.groundY, W, H - this.groundY);
+            ctx.fillStyle = "rgba(0,0,0,0.08)";
+            for (let i = 0; i < 6; i++) ctx.fillRect(0, this.groundY + i * ((H - this.groundY) / 6), W, 2);
+          },
+          drawCone(glowAmount) {
+            const apex = { x: this.coneApexX, y: this.coneApexY };
+            const baseL = { x: this.coneApexX - this.coneBaseW / 2, y: this.groundY };
+            const baseR = { x: this.coneApexX + this.coneBaseW / 2, y: this.groundY };
+            const g = ctx.createLinearGradient(0, apex.y, 0, this.groundY);
+            g.addColorStop(0, "#5c4738");
+            g.addColorStop(0.5, "#4a372a");
+            g.addColorStop(1, "#241b16");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(apex.x, apex.y);
+            ctx.lineTo(baseR.x, baseR.y);
+            ctx.lineTo(baseL.x, baseL.y);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#1a120e";
+            ctx.beginPath();
+            ctx.moveTo(apex.x - 14, this.craterY);
+            ctx.lineTo(apex.x, apex.y + 10);
+            ctx.lineTo(apex.x + 14, this.craterY);
+            ctx.closePath();
+            ctx.fill();
+
+            if (glowAmount > 0.03) {
+              const grad = ctx.createRadialGradient(apex.x, this.craterY, 1, apex.x, this.craterY, 26 + glowAmount * 24);
+              grad.addColorStop(0, `rgba(255,178,56,${Math.min(0.75, 0.55 * glowAmount)})`);
+              grad.addColorStop(1, "rgba(255,90,31,0)");
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.arc(apex.x, this.craterY, 26 + glowAmount * 24, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.strokeStyle = "rgba(233,228,218,0.08)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(apex.x, apex.y);
+            ctx.lineTo(baseL.x, baseL.y);
+            ctx.stroke();
+          },
+          drawPlug(plugAmount) {
+            if (plugAmount <= 0.02) return;
+            const apex = { x: this.coneApexX, y: this.craterY };
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, plugAmount);
+            ctx.fillStyle = "#3a332e";
+            ctx.beginPath();
+            ctx.ellipse(apex.x, apex.y + 2, 15 * plugAmount, 7 * plugAmount, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          },
+          drawScaleHouse() {
+            const bx = this.coneApexX + this.coneBaseW * 0.62;
+            const by = this.groundY;
+            const s = 9;
+            ctx.fillStyle = "#efe6d3";
+            ctx.fillRect(bx - s, by - s * 1.1, s * 2, s * 1.1);
+            ctx.fillStyle = "#8b3a2b";
+            ctx.beginPath();
+            ctx.moveTo(bx - s - 2, by - s * 1.1);
+            ctx.lineTo(bx, by - s * 2.1);
+            ctx.lineTo(bx + s + 2, by - s * 1.1);
+            ctx.closePath();
+            ctx.fill();
+          },
+        };
+
+        const LavaFlows = {
+          streams: [0.3, 0.5, 0.68],
+          t: 0,
+          update(dt) {
+            this.t += dt;
+          },
+          draw(intensity) {
+            if (intensity <= 0.02) return;
+            ctx.save();
+            this.streams.forEach((offset, i) => {
+              const top = { x: Terrain.coneApexX, y: Terrain.craterY };
+              const baseX = lerp(
+                Terrain.coneApexX - Terrain.coneBaseW * 0.42,
+                Terrain.coneApexX + Terrain.coneBaseW * 0.42,
+                offset,
+              );
+              const baseY = Terrain.groundY - 2;
+              const wobble = Math.sin(this.t * 1.4 + i * 2) * 6 * intensity;
+              ctx.strokeStyle = `rgba(255,${Math.floor(90 + 70 * intensity)},${Math.floor(20 + 20 * intensity)},${0.55 + 0.35 * intensity})`;
+              ctx.lineWidth = 3 + intensity * 5;
+              ctx.lineCap = "round";
+              ctx.beginPath();
+              ctx.moveTo(top.x, top.y + 4);
+              ctx.quadraticCurveTo((top.x + baseX) / 2 + wobble, (top.y + baseY) / 2, baseX, baseY);
+              ctx.stroke();
+              ctx.strokeStyle = `rgba(255,205,120,${0.5 * intensity})`;
+              ctx.lineWidth = 1.2 + intensity * 2;
+              ctx.stroke();
+            });
+            ctx.restore();
+          },
+        };
+
+        const Shockwaves = {
+          rings: [],
+          spawn(x, y) {
+            this.rings.push({ x, y, r: 4, alpha: 0.55 });
+          },
+          update(dt) {
+            for (const r of this.rings) {
+              r.r += dt * 220;
+              r.alpha -= dt * 1.1;
+            }
+            this.rings = this.rings.filter((r) => r.alpha > 0.02);
+          },
+          draw() {
+            ctx.save();
+            for (const r of this.rings) {
+              ctx.strokeStyle = `rgba(255,220,170,${Math.max(0, r.alpha)})`;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.ellipse(r.x, r.y, r.r, r.r * 0.4, 0, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+            ctx.restore();
+          },
+        };
+
+        function makePool(n) {
+          return new Array(n).fill(null);
+        }
+
+        const EruptionColumn = {
+          particles: makePool(460),
+          spawnAccum: 0,
+          spawnRate(ashDensity, envelope) {
+            return (3 + ashDensity * 70) * Math.max(0, envelope);
+          },
+
+          update(dt, ashDensity, plumeFrac, envelope, reduced) {
+            const ventX = Terrain.coneApexX;
+            const ventY = Terrain.craterY;
+            const rateMul = reduced ? 0.35 : 1;
+            this.spawnAccum += dt * this.spawnRate(ashDensity, envelope) * rateMul;
+            while (this.spawnAccum >= 1) {
+              this.spawnAccum -= 1;
+              this._spawn(ventX, ventY, ashDensity, plumeFrac);
+            }
+
+            for (let i = 0; i < this.particles.length; i++) {
+              const p = this.particles[i];
+              if (!p) continue;
+              p.age += dt;
+              const lifeT = p.age / p.life;
+              if (lifeT >= 1) {
+                this.particles[i] = null;
+                continue;
+              }
+              const riseEase = 1 - Math.pow(1 - Math.min(1, lifeT * 1.4), 2);
+              p.y = ventY - riseEase * p.riseTarget;
+              const spread = Math.pow(lifeT, 0.7) * p.spreadTarget;
+              p.x = p.baseX + Math.sin(p.phase + p.age * 0.6) * 4 + spread * p.dir;
+              p.r = p.r0 * (0.6 + lifeT * 1);
+              p.alpha = p.a0 * (lifeT < 0.15 ? lifeT / 0.15 : 1 - lifeT);
+            }
+          },
+
+          _spawn(ventX, ventY, ashDensity, plumeFrac) {
+            const idx = this.particles.findIndex((p) => p === null);
+            if (idx === -1) return;
+            const maxHeightPx = (Terrain.groundY - 40) * plumeFrac;
+            const dir = Math.random() < 0.5 ? -1 : 1;
+            this.particles[idx] = {
+              baseX: ventX + (Math.random() - 0.5) * 10,
+              y: ventY,
+              x: ventX,
+              phase: Math.random() * 10,
+              age: 0,
+              life: 3 + Math.random() * 2.4,
+              riseTarget: maxHeightPx * (0.55 + Math.random() * 0.5),
+              spreadTarget: (20 + maxHeightPx * 0.55) * (0.5 + Math.random() * 0.8),
+              dir,
+              r0: 10 + Math.random() * 16 + ashDensity * 14,
+              r: 0,
+              a0: 0.35 + Math.random() * 0.25,
+              alpha: 0,
+              dark: Math.random(),
+            };
+          },
+
+          draw(ashDensity) {
+            ctx.save();
+            for (const p of this.particles) {
+              if (!p) continue;
+              const shade = Math.floor(lerp(150, 60, ashDensity * 0.7 + p.dark * 0.3));
+              ctx.fillStyle = `rgba(${shade},${shade - 6},${shade - 14},${p.alpha})`;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          },
+
+          drawFountain(lavaIntensity, t) {
+            if (lavaIntensity < 0.05) return;
+            const ventX = Terrain.coneApexX;
+            const ventY = Terrain.craterY;
+            ctx.save();
+            for (let i = 0; i < 10; i++) {
+              const seed = i * 13.7;
+              const phase = (t * 1.8 + seed) % 1;
+              const h = phase * 34 * lavaIntensity;
+              const x = ventX + Math.sin(seed) * 10 * phase;
+              const y = ventY - h;
+              ctx.fillStyle = `rgba(255,${180 - Math.floor(phase * 90)},60,${(1 - phase) * 0.85})`;
+              ctx.beginPath();
+              ctx.arc(x, y, 2.4 * (1 - phase * 0.6), 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          },
+        };
+
+        const Umbrella = {
+          width: 0,
+          draw(active, plumeFrac, envelope, ashDensity, dt) {
+            const targetMax = active
+              ? Terrain.coneBaseW * (0.9 + plumeFrac * 0.9) * Math.min(1.3, Math.max(0.3, envelope))
+              : 0;
+            const rate = active ? 0.35 : 1.2;
+            this.width = approach(this.width, targetMax, rate, dt);
+            if (this.width < 6) return;
+
+            const topY = Terrain.craterY - (Terrain.groundY - 40) * plumeFrac;
+            ctx.save();
+            for (let i = 0; i < 3; i++) {
+              const w = this.width * (1 - i * 0.18);
+              const yOff = i * 7;
+              const grad = ctx.createRadialGradient(
+                Terrain.coneApexX,
+                topY + yOff,
+                4,
+                Terrain.coneApexX,
+                topY + yOff,
+                w * 0.55,
+              );
+              const shade = Math.floor(lerp(150, 80, ashDensity));
+              grad.addColorStop(0, `rgba(${shade},${shade - 4},${shade - 10},${0.4 - i * 0.09})`);
+              grad.addColorStop(1, `rgba(${shade},${shade - 4},${shade - 10},0)`);
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.ellipse(Terrain.coneApexX, topY + yOff, w * 0.55, 16 + i * 4, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          },
+        };
+
+        const PyroclasticFlow = {
+          t: 0,
+          update(dt) {
+            this.t += dt;
+          },
+          draw(intensity) {
+            if (intensity <= 0.02) return;
+            const baseY = Terrain.groundY;
+            const reach = intensity * Terrain.coneBaseW * 1.35;
+            const pulse = 1 + Math.sin(this.t * 1.6) * 0.03 * intensity;
+            ctx.save();
+            const g = ctx.createRadialGradient(Terrain.coneApexX, baseY, 4, Terrain.coneApexX, baseY, reach * pulse);
+            g.addColorStop(0, `rgba(120,90,80,${0.55 * intensity})`);
+            g.addColorStop(0.6, `rgba(90,75,72,${0.42 * intensity})`);
+            g.addColorStop(1, "rgba(80,70,68,0)");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.ellipse(Terrain.coneApexX, baseY, reach * pulse, reach * pulse * 0.3, 0, Math.PI, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          },
+        };
+
+        const RadiusRing = {
+          draw(radiusKm) {
+            const minKm = 1;
+            const maxKm = 500;
+            const minPx = 26;
+            const maxPx = Math.min(W, H * 1.6) * 0.62;
+            const t = Math.log(radiusKm / minKm) / Math.log(maxKm / minKm);
+            const px = lerp(minPx, maxPx, Math.max(0, Math.min(1, t)));
+            ctx.save();
+            ctx.strokeStyle = "rgba(217,194,92,0.55)";
+            ctx.setLineDash([6, 6]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.ellipse(Terrain.coneApexX, Terrain.groundY, px, px * 0.34, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          },
+        };
+
+        const Shake = {
+          x: 0,
+          y: 0,
+          update(intensity) {
+            if (intensity <= 0.01) {
+              this.x = 0;
+              this.y = 0;
+              return;
+            }
+            const mag = intensity * 5;
+            this.x = (Math.random() - 0.5) * mag;
+            this.y = (Math.random() - 0.5) * mag;
+          },
+        };
+
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function approach(cur, target, rate, dt) {
+          const diff = target - cur;
+          const step = diff * Math.min(1, rate * dt);
+          return Math.abs(diff) < 0.0005 ? target : cur + step;
+        }
+        function hexToRgb(hex) {
+          const v = hex.replace("#", "");
+          const n = parseInt(v.length === 3 ? v.split("").map((c) => c + c).join("") : v, 16);
+          return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        }
+        function mix(hexA, hexB, t) {
+          const a = hexToRgb(hexA);
+          const b = hexToRgb(hexB);
+          return `rgb(${Math.round(lerp(a[0], b[0], t))},${Math.round(lerp(a[1], b[1], t))},${Math.round(lerp(a[2], b[2], t))})`;
+        }
+
+        let lastTime = performance.now();
+
+        function frame(now) {
+          const dt = Math.min(0.05, (now - lastTime) / 1000);
+          lastTime = now;
+          state.clock += dt;
+
+          const approachRate = 1.6;
+          for (const k of Object.keys(state.current)) {
+            state.current[k] = approach(state.current[k], state.target[k], approachRate, dt);
+          }
+
+          const style = STYLE_DATA[state.styleIndex];
+          state.prevEnvelope = state.envelope;
+          const rawEnv = computeEnvelope(style.pulseType, state.clock);
+          const attackRate = rawEnv > state.envelope ? 14 : 3.2;
+          state.envelope = approach(state.envelope, rawEnv, attackRate, dt);
+
+          if (
+            (style.pulseType === "strombolian" || style.pulseType === "vulcanian") &&
+            state.envelope > 0.9 &&
+            state.prevEnvelope <= 0.9
+          ) {
+            Shockwaves.spawn(Terrain.coneApexX, Terrain.craterY);
+          }
+
+          LavaFlows.update(dt);
+          PyroclasticFlow.update(dt);
+          Shockwaves.update(dt);
+          EruptionColumn.update(dt, state.current.ashDensity, state.current.plumeFrac, state.envelope, state.reducedMotion);
+          Shake.update(state.current.shake * Math.min(1.4, Math.max(0.2, state.envelope)));
+
+          const plugAmount = style.pulseType === "vulcanian" ? Math.max(0, 1 - state.envelope * 0.9) : 0;
+
+          ctx.save();
+          ctx.clearRect(0, 0, W, H);
+          ctx.translate(Shake.x, Shake.y);
+
+          Terrain.drawSky(state.current.darken);
+          Terrain.drawFarHills();
+          RadiusRing.draw(style.radiusKm);
+          Terrain.drawGround();
+          Terrain.drawScaleHouse();
+          PyroclasticFlow.draw(state.current.pyroclastic * Math.min(1.3, Math.max(0.25, state.envelope)));
+          Terrain.drawCone(state.current.lavaIntensity + (state.envelope - 1) * 0.3);
+          Terrain.drawPlug(plugAmount);
+          LavaFlows.draw(state.current.lavaIntensity);
+          EruptionColumn.drawFountain(state.current.lavaIntensity, LavaFlows.t);
+          EruptionColumn.draw(state.current.ashDensity);
+          Umbrella.draw(style.umbrella, state.current.plumeFrac, state.envelope, state.current.ashDensity, dt);
+          Shockwaves.draw();
+
+          ctx.restore();
+
+          UI.updateVentBadge(style, plugAmount, state.envelope);
+
+          requestAnimationFrame(frame);
+        }
+
+        const UI = {
+          slider: document.getElementById("esStyleSlider"),
+          styleName: document.getElementById("esStyleName"),
+          styleTagline: document.getElementById("esStyleTagline"),
+          styleDesc: document.getElementById("esStyleDesc"),
+          styleExample: document.getElementById("esStyleExample"),
+          statColumn: document.getElementById("esStatColumn"),
+          statViscosity: document.getElementById("esStatViscosity"),
+          statGas: document.getElementById("esStatGas"),
+          statRadius: document.getElementById("esStatRadius"),
+          statDuration: document.getElementById("esStatDuration"),
+          stageReadout: document.getElementById("esStageReadout"),
+          stageEyebrow: document.getElementById("esStageEyebrow"),
+          ticksEl: document.getElementById("esTicks"),
+          railEl: document.getElementById("esStageRail"),
+          ventStateEl: document.getElementById("esVentState"),
+
+          initTicks() {
+            this.ticksEl.innerHTML = STYLE_DATA.map((d, i) => `<span data-i="${i}" title="${d.name}">${d.name}</span>`).join("");
+            this.railEl.innerHTML = STYLE_DATA.map((d, i) => `<div class="es-dot" data-i="${i}"></div>`).join("");
+          },
+
+          applyStyle(i) {
+            const d = STYLE_DATA[i];
+            state.styleIndex = i;
+            state.clock = 0;
+            setTargetFromStyle(i);
+
+            this.styleName.textContent = d.name;
+            this.styleTagline.textContent = d.tagline;
+            this.styleDesc.innerHTML = d.desc;
+            this.styleExample.innerHTML = `<b>Reference:</b> ${d.eg}`;
+            this.statColumn.textContent = d.column;
+            this.statViscosity.textContent = d.viscosity;
+            this.statGas.textContent = d.gas;
+            this.statRadius.textContent = `~${d.radiusKm.toLocaleString()} km`;
+            this.statDuration.textContent = d.duration;
+            this.stageReadout.textContent = d.name;
+            this.stageEyebrow.textContent = `Stage ${i + 1} of ${STYLE_DATA.length}`;
+
+            [...this.ticksEl.children].forEach((el) => el.classList.toggle("active", Number(el.dataset.i) === i));
+            [...this.railEl.children].forEach((el) => {
+              const n = Number(el.dataset.i);
+              el.classList.toggle("done", n < i);
+              el.classList.toggle("active", n === i);
+            });
+          },
+
+          updateVentBadge(style, plugAmount, envelope) {
+            if (style.pulseType === "vulcanian") {
+              this.ventStateEl.style.opacity = 1;
+              this.ventStateEl.textContent = plugAmount > 0.4 ? "Vent: pressure building" : "Vent: blast released";
+            } else if (style.pulseType === "strombolian") {
+              this.ventStateEl.style.opacity = 1;
+              this.ventStateEl.textContent = envelope > 0.9 ? "Vent: bursting" : "Vent: quiescent";
+            } else {
+              this.ventStateEl.style.opacity = 0;
+            }
+          },
+
+          bind() {
+            this.slider.addEventListener("input", (e) => this.applyStyle(Number(e.target.value)));
+          },
+        };
+
+        function init() {
+          resize();
+          Terrain.layout();
+          window.addEventListener("resize", () => {
+            resize();
+            Terrain.layout();
+          });
+
+          UI.initTicks();
+          UI.bind();
+          UI.applyStyle(0);
+          state.current = Object.assign({}, state.target);
+
+          requestAnimationFrame(frame);
+        }
+
+        init();
+      })();
+    </script>
     <button type="button" class="back-to-top" aria-label="Back to top">↑</button>
   </body>
 </html>

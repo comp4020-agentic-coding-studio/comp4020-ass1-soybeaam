@@ -1,23 +1,8 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+This project is an interactive explainer, built for Assignment 1, about how **volcanic explosivity** affects the size and magnitude of an eruption. The site lets users explore different levels of volcanic activity and see how changes in explosivity shift the scale, intensity, and effects of an eruption.
 
 ## The moments that mattered
 
@@ -26,70 +11,25 @@ Key commits so far:
 - Hero cursor lens (tracking, SVG `feDisplacementMap`-based distortion that
   follows the pointer):
   [`7a1bc23`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/7a1bc231277cbcf667d2df57fcfda51dbfcdc86e)
-- Hero "Discover more" CTA button:
-  [`a07cd94`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/a07cd943fcb7663ee18eb6e917decf703b7c6893)
+
+  I wanted a cursor-following pointer that also distorted the shape around it. Claude initially built a frosted-glass effect instead, so I tried longer, more detailed prompts plus a reference link — which wasted tokens without improving the result. Changing my terminology instead of adding detail worked: reloading the zoomed-in session showed Claude had corrected the interaction. This taught me that redescribing a problem beats repeating it with more detail.
+
 - Three-act bird's-eye camera path for the volcano scene:
-  [`344ea58`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/344ea58fa68de606983a1d238ecf91d03d93708f)
+  [`344ea58`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/344ea58fa68de606983a1d238ecf91d03d93708f),
+  [`7a1bc23`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/7a1bc231277cbcf667d2df57fcfda51dbfcdc86e)
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+  I wanted a 3D scene where the volcano transitions into the next section. I prompted Claude for a bird's-eye view before zooming in, but the camera sat far too high, and several more prompts didn't fix it. Applying the same lesson — redescribe rather than repeat — I scrapped the bird's-eye framing entirely and specified its removal, so the crater reads as a bowl with visible depth instead of a flattened contour map. Removing detail, rather than adding more, is what fixed it. The same fix exposed the model's square-edged baked plate at the wider angle, so I also asked Claude for a ground plane to hide it — it built `buildTerrainApron()`, a procedural annulus of terrain that extends past the plate's edge and fades into the page background.
 
-1. **what happened** --- the problem, or the thing the agent got wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+- Eruption-simulation spec (researched Inverness Design Studio's and URI's
+  Lavasimulate's interaction models before scoping `eruption-sim.ts` from
+  scratch):
+  [`9a2436c`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/9a2436cc18e8a1105d427ac50ed1317275938a3e)
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** rather than in another prompt --- a rule added to
-`CLAUDE.md`, a check wired up, an attempt thrown away: re-prompting until it
-passes is the routine case, and changing what the agent works against is the
-skilled one.
+  I initially tried to recreate the eruption panel from an image and website reference. Claude struggled to reproduce it, and asking it to keep the working parts while fixing others just triggered full rewrites of the component. Instead of re-prompting the same implementation, I researched Inverness Design Studio's and URI's Lavasimulate's interaction models and used them to scope `eruption-sim.ts` from scratch. I knew it was working once the new implementation let me make targeted changes without the rest being rewritten — much more control over the final result.
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+- Subagent scopes created (CLAUDE.md gains a Subagents section defining
+  `html-writer`, `css-stylist`, `style-refactorer`, `interaction-engineer`,
+  `three-d-engineer`, and `researcher`):
+  [`0f7be92`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/0f7be924d1460f3d1171c56aec0a9f8c9162b2ab)
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
-
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that the
-current reflection entry is in `reflections/`, and that your `CLAUDE.md` is
-there --- before a marker ever opens the file. It checks that your map is
-traceable, not that it is good: the marker judges whether your small,
-deliberately chosen set of moments shows real judgement and reflection. A green
-check is not a substitute for that curation.
-
-Images are deliberately not checked, because whether one renders is visible the
-moment you look. Open this file on GitHub and look at it before you ship.
+  Web scraping in particular kept hitting blockers and silently retrying, burning tokens without it being obvious anything was stuck. I created a dedicated researcher agent to scrape once and save its findings to a file, so other agents could read that instead of re-fetching it, and added a rule to `CLAUDE.md` to stop processes once the token budget dropped below a threshold. I knew it worked once the other agents could fan out and finish their tasks without getting stuck re-researching the same ground.
