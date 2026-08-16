@@ -1,5 +1,6 @@
-// Browser wiring for the reveal system: DOM scanning, IntersectionObserver
-// setup, and the text-reveal word-splitting prep. All decision logic lives in
+// Browser wiring for the reveal system: DOM scanning, the scroll/resize-driven
+// gate and rAF loop that decide when elements are near/in the viewport, and
+// the text-reveal word-splitting prep. All decision logic lives in
 // reveal-engine.ts — this file only does the browser-API plumbing around it.
 
 import {
@@ -74,8 +75,8 @@ function resolveDelay(el: Element, ownDelay: number): number {
  * element (including ones freshly created by the text-reveal split),
  * assigns each its transition delay, and watches it for reveal/hide.
  *
- * This does *not* trust a single IntersectionObserver's own
- * isIntersecting/intersectionRatio for the decision, for two reasons found
+ * Neither stage of this trusts a native IntersectionObserver's own
+ * isIntersecting/intersectionRatio for its decision, for three reasons found
  * by testing this against real Chromium, not just reading the spec:
  *
  * 1. `intersectionRatio` is computed from the target's *rendered* area, and
@@ -90,18 +91,38 @@ function resolveDelay(el: Element, ownDelay: number): number {
  *    at; if that's under its configured threshold, no further callback ever
  *    arrives as it scrolls further into view, because it never re-crosses
  *    that boundary again.
+ * 3. A native observer's callback itself only fires when *its own* (clipped)
+ *    notion of the intersection ratio crosses a threshold between two
+ *    samples — and for `image-reveal` elements, Chromium's clip-path
+ *    collapse means that ratio is pinned near enough to 0 the whole time
+ *    that a single instant scroll (an anchor jump, `scrollIntoView`, a
+ *    programmatic scroll-to) can move an element from genuinely offscreen to
+ *    covering most of the viewport without the observer ever calling back at
+ *    all: verified in real Chromium by watching a fresh observer on
+ *    `.eruption-sim` report exactly one entry (`isIntersecting: false`) both
+ *    immediately before *and* immediately after a scroll that moved its true
+ *    `getBoundingClientRect()` from fully offscreen to ~78% covering an
+ *    844px viewport — no second entry ever arrived, so nothing watching only
+ *    `entry.isIntersecting`/`entry.boundingClientRect` inside that callback
+ *    could ever have caught it, no matter what it did with that data.
  *
- * So instead: one coarse, generously-margined IntersectionObserver decides
- * only whether an element is *anywhere near* the viewport (cheap, and reuses
- * this codebase's existing gated-rAF-loop convention — see scroll-effects.ts
- * — for "don't run continuous work for offscreen content"). While an element
- * is near, a single shared rAF loop recomputes its exact intersection ratio
- * every frame from live `getBoundingClientRect()` against its own
- * *configured* threshold/rootMargin (via `geometricIntersectionRatio` /
- * `expandedViewportRect`, both pure and unaffected by clip-path). That's
- * unaffected by either issue above, at the cost of doing real per-frame work
- * only for elements plausibly nearby, and dropping non-replay elements out
- * of both the gate and the loop the moment they've revealed.
+ * So instead: a coarse gate (`syncGate`) decides whether each element is
+ * *anywhere near* the viewport by comparing its live, unclipped
+ * `getBoundingClientRect()` against a generously-margined viewport rect
+ * (`geometricIntersectionRatio` / `expandedViewportRect`, both pure and
+ * unaffected by clip-path — see the doc comment on `geometricIntersectionRatio`
+ * in reveal-engine.ts). That gate re-runs once up front and again on every
+ * `scroll`/`resize`, coalesced to at most once per animation frame — a real
+ * DOM event, not a native observer's own (unreliable, for this content)
+ * judgement of whether anything changed — so it can't silently skip the
+ * single-jump case above. While an element is near, a single shared rAF loop
+ * (`tick`) recomputes its exact intersection ratio every frame from the same
+ * live geometry against its own *configured* threshold/rootMargin. That's
+ * unaffected by all three issues above, at the cost of doing real per-frame
+ * work only for elements plausibly nearby (reusing this codebase's existing
+ * gated-loop convention — see scroll-effects.ts — for "don't run continuous
+ * work for offscreen content"), and dropping non-replay elements out of both
+ * the gate and the loop the moment they've revealed.
  */
 export function initScrollReveal(root: ParentNode = document): void {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -157,7 +178,6 @@ export function initScrollReveal(root: ParentNode = document): void {
         hasBeenRevealed.set(el, true);
         if (!config.replay) {
           active.delete(el);
-          gate.unobserve(el);
         }
       } else if (action === "hide") {
         hasBeenRevealed.set(el, false);
@@ -171,25 +191,56 @@ export function initScrollReveal(root: ParentNode = document): void {
     if (rafId === null) rafId = requestAnimationFrame(tick);
   }
 
-  const gate = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const el = entry.target;
-        if (entry.isIntersecting) {
-          active.add(el);
-          startLoop();
-        } else {
-          active.delete(el);
-        }
+  // See the doc comment above: this replaces a native IntersectionObserver's
+  // own isIntersecting/intersectionRatio for the *gate* decision too, not
+  // just tick()'s precise per-element one, and for the same clip-path
+  // reasons. It re-checks every element's real geometry against the gate's
+  // generous rootMargin, driven by actual scroll/resize events rather than
+  // a native observer's own (unreliable, for this content) judgement of
+  // whether anything worth reporting changed.
+  function syncGate(): void {
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const gateRect = expandedViewportRect(GATE_ROOT_MARGIN, viewportWidth, viewportHeight);
+
+    for (const el of elements) {
+      const config = configByElement.get(el);
+      if (!config) continue;
+
+      // A non-replay element that's already revealed is done for good —
+      // tick() has already dropped it from `active`, and it'll never need
+      // to re-enter, so there's nothing left to gate here.
+      if (hasBeenRevealed.get(el) && !config.replay) continue;
+
+      const ratio = geometricIntersectionRatio(el.getBoundingClientRect(), gateRect);
+      if (ratio > 0) {
+        active.add(el);
+        startLoop();
+      } else {
+        active.delete(el);
       }
-    },
-    { rootMargin: GATE_ROOT_MARGIN },
-  );
+    }
+  }
+
+  let gateSyncPending = false;
+  function scheduleGateSync(): void {
+    if (gateSyncPending) return;
+    gateSyncPending = true;
+    requestAnimationFrame(() => {
+      gateSyncPending = false;
+      syncGate();
+    });
+  }
 
   for (const el of elements) {
     const config = parseRevealConfig(el);
     configByElement.set(el, config);
     el.style.transitionDelay = `${resolveDelay(el, config.delay)}ms`;
-    gate.observe(el);
   }
+
+  // Establish initial state (elements already near the viewport at load)
+  // before wiring up the events that keep it current.
+  syncGate();
+  window.addEventListener("scroll", scheduleGateSync, { passive: true });
+  window.addEventListener("resize", scheduleGateSync);
 }

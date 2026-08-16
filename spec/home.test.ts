@@ -10,7 +10,7 @@ import { ANIMATIONS } from "../reveal-engine";
 // what's specific to this page's six-section scroll-reveal structure.
 const doc = new JSDOM(readFileSync(resolve("dist/index.html"), "utf8")).window.document;
 
-const SECTION_IDS = ["hero", "volcano-scene", "intro", "features", "showcase", "process", "cta"];
+const SECTION_IDS = ["hero", "volcano-scene", "features", "showcase", "process", "cta"];
 
 describe("home page sections", () => {
   for (const id of SECTION_IDS) {
@@ -39,11 +39,6 @@ describe("home page reveal contract", () => {
   it("gives the hero its sequential-entrance stagger container", () => {
     const hero = doc.querySelector("#hero");
     expect(hero?.hasAttribute("data-stagger")).toBe(true);
-  });
-
-  it("gives the hero a working primary CTA", () => {
-    const cta = doc.querySelector("#hero a.cta-button");
-    expect(cta?.getAttribute("href")).toBeTruthy();
   });
 
   it("gives the final CTA section a working call to action", () => {

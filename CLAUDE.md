@@ -159,8 +159,10 @@ know whose repo it is. Spend the effort on the work.
 `css-stylist` (raw CSS only), `style-refactorer` (pure id/class rename-and-dedupe,
 no new styling or behavior), `interaction-engineer` (scroll/interactivity `.ts`,
 escalates to a stronger model for hard timing problems), `three-d-engineer`
-(Three.js/3D geometry, asks before non-trivial design calls), and `researcher`
-(web research only — never edits site source).
+(Three.js/3D geometry, asks before non-trivial design calls), `researcher`
+(web research only — never edits site source), and `debug-agent` (read-only
+browser verification via `scripts/shoot.mjs`/`agent-browser` — reports what the
+rendered page actually shows, never edits source).
 
 `researcher` keeps its findings in `RESEARCH.md` at the repo root instead of
 each agent re-fetching the same pages: check there (or delegate to

@@ -55,11 +55,12 @@ const TURNS = 2;
 //      that read as a contour diagram, losing the profile and the height that
 //      make it a volcano. Around 52° the silhouette, the crater rim and the
 //      lava in it are all still legible in one frame.
-//   3. CENTRE   — swung back up to near-vertical and dived in close on the
-//      crater's centre, for the finale. This leg is a bigger elevation swing
-//      than it used to be (52° → 85° rather than 78° → 85°), which is the
-//      point: the drop into the crater now has a change of angle behind it,
-//      not just a change of distance.
+//   3. CENTRE   — pulled in close on the crater's centre for the finale, but
+//      held at a shallow-enough elevation (55°, down from an earlier 85°)
+//      that the shot reads as skimming in low over the rim and dropping
+//      inside, not as a straight-down look from above: 85° flattened the
+//      approach into an overhead plan the same way AERIAL's 78° did, losing
+//      the sense of diving *into* something rather than hovering over it.
 // Elevation is degrees above the horizontal plane through the model's centre;
 // 0° is dead-on, 90° is straight down (never reached — see `poseAt`).
 type PoseKeyframe = { progress: number; elevationDeg: number; distanceWide: number; distanceNarrow: number };
@@ -72,8 +73,8 @@ type PoseKeyframe = { progress: number; elevationDeg: number; distanceWide: numb
 // the difference isn't worth carrying.
 const POSE_KEYFRAMES: PoseKeyframe[] = [
   { progress: 0, elevationDeg: 28.87, distanceWide: 0.62, distanceNarrow: 0.75 }, // OPEN
-  { progress: 0.45, elevationDeg: 52, distanceWide: 1.7, distanceNarrow: 1.7 }, // AERIAL
-  { progress: 1, elevationDeg: 85, distanceWide: 0.16, distanceNarrow: 0.22 }, // CENTRE
+  { progress: 0.45, elevationDeg: 52, distanceWide: 1.0, distanceNarrow: 1.0 }, // AERIAL
+  { progress: 1, elevationDeg: 55, distanceWide: 0.16, distanceNarrow: 0.22 }, // CENTRE
 ];
 const POSE_ASPECT_RANGE = { narrow: 0.5, wide: 1.6 };
 

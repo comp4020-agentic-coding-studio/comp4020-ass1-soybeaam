@@ -3,6 +3,7 @@ import { initScrollReveal } from "./reveal-observer";
 import { initVolcanoScene } from "./volcano-scene";
 import { initHeroCursorGlass } from "./hero-cursor-glass";
 import { initBackToTop } from "./back-to-top";
+import { initEruptionSimulator } from "./eruption-sim";
 
 /**
  * Slows the hero background video to a clearly ambient pace. It's stock
@@ -25,3 +26,4 @@ initVolcanoScene();
 initHeroVideoPlaybackRate();
 initHeroCursorGlass();
 initBackToTop();
+initEruptionSimulator();

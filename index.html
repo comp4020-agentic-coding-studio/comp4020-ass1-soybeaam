@@ -37,7 +37,7 @@
       <nav aria-label="Primary">
         <a href="#hero">Home</a>
         <a href="#volcano-scene">Volcano</a>
-        <a href="#intro">Intro</a>
+        <a href="#underground-process">Underground</a>
         <a href="#features">Features</a>
         <a href="#showcase">Showcase</a>
         <a href="#process">Process</a>
@@ -48,9 +48,8 @@
       <section id="hero" data-stagger="120">
         <h1 data-animation="fade-up">Natural phenomenon of volcanic eruptions</h1>
         <p data-animation="fade-up">
-          Geological fury made visible: molten rock, ash, and pressure reshaping the surface in minutes.
+          Molten rock, ash, and pressure reshaping the surface in minutes.
         </p>
-        <a class="cta-button" href="#cta" data-animation="fade-up">Discover more</a>
         <div class="hero-visual" data-animation="scale">
           <video autoplay muted loop playsinline poster="./assets/volcano.jpg" aria-hidden="true">
             <source src="./assets/152085-802335503_medium.mp4" type="video/mp4">
@@ -60,60 +59,202 @@
       </section>
 
       <section id="volcano-scene">
-        <h2>The Volcano Itself</h2>
         <div class="volcano-canvas" aria-hidden="true"></div>
         <div class="volcano-end-fade" aria-hidden="true"></div>
       </section>
 
-      <section id="intro">
-        <p class="statement" data-animation="text-reveal">
-          The future of web experiences lies in thoughtful, purposeful interactions that guide users
-          through content naturally and intuitively.
-        </p>
-        <div class="intro-media" data-animation="image-reveal" role="img" aria-label="Placeholder image illustrating design concept"></div>
-      </section>
+      <section id="underground-process">
+        <h2 data-animation="fade-up">Beneath the Surface</h2>
+        <div class="eruption-sim" data-animation="image-reveal" data-eruption-style="effusive">
+          <div class="eruption-sim-stage">
+            <div class="eruption-sim-visual">
+              <svg class="eruption-sim-diagram" viewBox="0 0 300 400" role="img" aria-label="Cross-section and surface view of a volcano showing magma pressure, a fuming vent, and the currently selected eruption style">
+                <path class="eruption-sim-crust" d="M0,260 L4,256 L8,251 L14,244 Q28,232 42,224 L52,216 Q68,202 88,182 Q110,160 140,152 Q148,150 150,150 Q152,151 160,160 L178,175 Q195,190 215,208 L235,225 Q260,243 280,255 L295,259 L300,260 L300,400 L0,400 Z" />
+                <path class="eruption-sim-conduit-outline" d="M133,150 L167,150 L167,294 L133,294 Z" />
+                <path class="eruption-sim-conduit-fill" d="M133,150 L167,150 L167,294 L133,294 Z" />
+                <path class="eruption-sim-chamber-outline" d="M74,294 L226,294 L226,370 L74,370 Z" />
+                <path class="eruption-sim-chamber-fill" d="M74,294 L226,294 L226,370 L74,370 Z" />
 
-      <section id="features">
-        <h2>Key Features</h2>
-        <div class="feature-grid" data-stagger="100">
-          <article class="feature-card" data-animation="fade-up">
-            <h3>Smooth Animations</h3>
-            <p>
-              Carefully orchestrated reveal effects that guide user attention and enhance
-              engagement as they scroll through your content.
-            </p>
-          </article>
-          <article class="feature-card" data-animation="fade-up">
-            <h3>Responsive Design</h3>
-            <p>
-              Built to adapt beautifully across all device sizes, from desktop to mobile,
-              ensuring a consistent experience everywhere.
-            </p>
-          </article>
-          <article class="feature-card" data-animation="fade-up">
-            <h3>Performance First</h3>
-            <p>
-              Optimized for speed and efficiency, with minimal overhead and maximum impact.
-              Fast load times and smooth scrolling on every device.
-            </p>
-          </article>
-          <article class="feature-card" data-animation="fade-up">
-            <h3>Accessible Content</h3>
-            <p>
-              Thoughtfully designed with accessibility in mind, ensuring your content reaches
-              and serves all visitors regardless of their abilities.
-            </p>
-          </article>
+                <g class="eruption-sim-bubbles" aria-hidden="true">
+                  <circle class="eruption-sim-bubble" cx="145" cy="292" r="3" />
+                  <circle class="eruption-sim-bubble" cx="156" cy="278" r="4" />
+                  <circle class="eruption-sim-bubble" cx="142" cy="260" r="4.5" />
+                  <circle class="eruption-sim-bubble" cx="158" cy="240" r="5.5" />
+                  <circle class="eruption-sim-bubble" cx="144" cy="218" r="6.5" />
+                  <circle class="eruption-sim-bubble" cx="157" cy="195" r="7.5" />
+                  <circle class="eruption-sim-bubble" cx="148" cy="172" r="8.5" />
+                </g>
+
+                <path class="eruption-sim-flow" d="M150,150 C140,190 120,230 95,258 C80,275 70,290 65,310" />
+
+                <g class="eruption-sim-fume" aria-hidden="true">
+                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
+                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
+                  <circle class="eruption-sim-fume-puff" cx="150" cy="150" r="6" />
+                </g>
+
+                <g class="eruption-sim-burst" aria-hidden="true">
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                  <circle class="eruption-sim-ejecta" cx="150" cy="150" r="4" />
+                </g>
+
+                <g class="eruption-sim-burst-smoke" aria-hidden="true">
+                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
+                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
+                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
+                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
+                  <circle class="eruption-sim-smoke-puff" cx="150" cy="150" r="10" />
+                </g>
+              </svg>
+              <canvas class="eruption-sim-particles" aria-hidden="true"></canvas>
+            </div>
+
+            <div class="eruption-sim-metrics" aria-live="polite">
+              <div class="eruption-sim-metrics-group eruption-sim-metrics-group-inputs">
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">Viscosity</span>
+                  <span class="eruption-sim-metric-value" id="metric-viscosity">30%</span>
+                </div>
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">Gas content</span>
+                  <span class="eruption-sim-metric-value" id="metric-gas">30%</span>
+                </div>
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">Chamber pressure</span>
+                  <span class="eruption-sim-metric-value" id="metric-pressure">100%</span>
+                </div>
+              </div>
+              <div class="eruption-sim-metrics-group eruption-sim-metrics-group-outputs">
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">Eruption rate</span>
+                  <span class="eruption-sim-metric-value" id="metric-rate">0 m&sup3;/s</span>
+                </div>
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">Column height</span>
+                  <span class="eruption-sim-metric-value" id="metric-column-height">0.0 km</span>
+                </div>
+                <div class="eruption-sim-metric">
+                  <span class="eruption-sim-metric-label">VEI</span>
+                  <span class="eruption-sim-metric-value" id="metric-vei">0</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="eruption-sim-status" id="eruption-status" role="status">Erupting continuously — chamber full</p>
+          </div>
+
+          <div class="eruption-sim-panels">
+            <div class="eruption-sim-panel eruption-sim-panel-parameters">
+              <h3 class="eruption-sim-panel-title">Magma parameters</h3>
+
+              <div class="eruption-sim-control">
+                <label class="eruption-sim-label" for="eruption-viscosity">Magma viscosity</label>
+                <input type="range" id="eruption-viscosity" class="eruption-sim-slider" min="0" max="100" value="30" step="1" aria-describedby="eruption-viscosity-desc" />
+                <output class="eruption-sim-readout" id="eruption-viscosity-readout" for="eruption-viscosity">30%</output>
+                <p class="eruption-sim-control-desc" id="eruption-viscosity-desc">How thick and gas-trapping the magma is — fluid basalt flows freely, thick rhyolite resists and builds pressure.</p>
+              </div>
+
+              <div class="eruption-sim-control">
+                <label class="eruption-sim-label" for="eruption-gas">Gas content</label>
+                <input type="range" id="eruption-gas" class="eruption-sim-slider" min="0" max="100" value="30" step="1" aria-describedby="eruption-gas-desc" />
+                <output class="eruption-sim-readout" id="eruption-gas-readout" for="eruption-gas">30%</output>
+                <p class="eruption-sim-control-desc" id="eruption-gas-desc">Dissolved gas trying to escape — the more there is, the more explosively it expands on the way up.</p>
+              </div>
+
+              <button type="button" class="eruption-sim-reset" id="eruption-reset">Reset volcano</button>
+            </div>
+
+            <div class="eruption-sim-panel eruption-sim-panel-style">
+              <h3 class="eruption-sim-panel-title">Eruption style</h3>
+              <div class="eruption-sim-style-tabs" role="group" aria-label="Eruption style">
+                <button type="button" class="eruption-sim-style-tab is-active" aria-pressed="true" data-style="effusive">Effusive</button>
+                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="hawaiian">Hawaiian</button>
+                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="strombolian">Strombolian</button>
+                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="vulcanian">Vulcanian</button>
+                <button type="button" class="eruption-sim-style-tab" aria-pressed="false" data-style="plinian">Plinian</button>
+              </div>
+              <p class="eruption-sim-style-desc" id="eruption-style-desc">Gentle, continuous lava effusion with almost no explosivity — long-lived shield-building flows.</p>
+              <button type="button" class="eruption-sim-erupt" id="eruption-erupt">Trigger eruption</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section id="showcase">
-        <h2>Showcase</h2>
-        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element one"></div>
-        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element two"></div>
-        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15" role="img" aria-label="Placeholder image showcasing design element three"></div>
-      </section>
+      <section id="features">
+        <h2>Eruption Styles</h2>
 
+        <p class="feature-intro" data-animation="fade-up">
+          Magma's viscosity and dissolved gas decide how it erupts — five recognised styles, from gentle effusion to catastrophic Plinian columns, each defined by the conditions that produce it.
+        </p>
+        <div class="feature-grid" data-stagger="100">
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Effusive</h3>
+            <p>
+              Low-viscosity basaltic magma with low dissolved gas lets pressure vent freely, producing continuous, gently flowing lava instead of an explosion.
+            </p>
+            <p class="feature-card-danger" data-danger="low"><strong>Danger: Low</strong> (VEI 0–1) — needs low viscosity and low gas content.</p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Hawaiian</h3>
+            <p>
+              Very fluid basalt with slightly more trapped gas erupts as sustained lava fountains and rivers, building shield volcanoes layer by layer.
+            </p>
+            <p class="feature-card-danger" data-danger="low-moderate"><strong>Danger: Low–Moderate</strong> (VEI 0–1) — needs very low viscosity and low-to-moderate gas escaping in rapid, rhythmic bubbles.</p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Strombolian</h3>
+            <p>
+              Gas accumulates in discrete pockets within moderately viscous magma, bursting free every few minutes in short, separate explosions.
+            </p>
+            <p class="feature-card-danger" data-danger="moderate"><strong>Danger: Moderate</strong> (VEI 1–2) — needs moderate viscosity and moderate gas trapped in isolated bubbles rather than escaping continuously.</p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Vulcanian</h3>
+            <p>
+              A viscous, gas-choked plug seals the vent until pressure shatters it, blasting dense ash and ballistic blocks outward in short, violent bursts.
+            </p>
+            <p class="feature-card-danger" data-danger="high"><strong>Danger: High</strong> (VEI 2–3) — needs high viscosity and high gas content sealed beneath a solidified plug.</p>
+          </article>
+          <article class="feature-card" data-animation="fade-up">
+            <h3>Plinian</h3>
+            <p>
+              Extremely viscous, gas-saturated magma drives a sustained, high-velocity blast that punches a towering ash column tens of kilometres into the stratosphere.
+            </p>
+            <p class="feature-card-danger" data-danger="extreme"><strong>Danger: Extreme</strong> (VEI 4–8) — needs very high viscosity and very high gas content sustained under extreme pressure.</p>
+          </article>
+        </div>
+      </section>
+      <section>
+      <h2>Some Characteristics</h2>
+
+      <section id="showcase">
+
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15">
+          <img src="./assets/jacques-dillies-9UFbTQiDgKI-unsplash.jpg" alt="Lava fountain during a Hawaiian-style eruption" loading="lazy" width="2410" height="3013" />
+          <p class="showcase-caption"><strong>Lava fountains</strong> — Hawaiian-style eruptions throw fluid basalt tens of metres skyward in rhythmic bursts, building shield volcanoes layer by layer.</p>
+        </div>
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15">
+          <img src="./assets/christian-miranda-iIs5nnwEmxY-unsplash.jpg" alt="Ash plume rising from an explosive eruption" loading="lazy" width="3504" height="2336" />
+          <p class="showcase-caption"><strong>Ash plumes</strong> — Explosive eruptions loft pulverised rock and glass kilometres into the atmosphere, grounding aircraft and dimming skies for months.</p>
+        </div>
+        <div class="showcase-media" data-animation="image-reveal" data-parallax="0.15">
+          <img src="./assets/charlie-orellana-d5swVaUSoUw-unsplash.jpg" alt="Pyroclastic flow racing down a volcano's flank" loading="lazy" width="6240" height="4160" />
+          <p class="showcase-caption"><strong>Pyroclastic flows</strong> — Superheated gas and ash race downslope at highway speed, the deadliest hazard a volcano can produce.</p>
+        </div>
+      </section>
+      </section>
       <section id="process">
         <h2>Anatomy of an Eruption</h2>
         <ol class="timeline" data-stagger="100">
@@ -146,16 +287,13 @@
       </section>
 
       <section id="cta">
-        <h2 data-animation="fade-up">Ready to Begin?</h2>
-        <p data-animation="fade-up">
-          Transform your ideas into compelling digital experiences. Let's create something remarkable together.
-        </p>
         <a class="cta-button" href="#hero" data-animation="fade-up">Back to top</a>
       </section>
     </main>
     <footer>
       <p>&copy; 2026 COMP4020 prototype. All rights reserved.</p>
       <p><a href="https://sketchfab.com/3d-models/volcano-136292fd63fc43a5b446d868fcaa7751">volcano</a> by <a href="https://sketchfab.com/rodrigogelmi">gelmi.com.br</a> is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC Attribution 4.0</a></p>
+      <p>Volcano eruption photograph via <a href="https://www.britannica.com/story/what-causes-a-volcano-to-erupt">Encyclopedia Britannica</a>, "Eruption of a volcano near Antigua, Guatemala."</p>
     </footer>
     <script type="module" src="./main.ts"></script>
     <button type="button" class="back-to-top" aria-label="Back to top">↑</button>

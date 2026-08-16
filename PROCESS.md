@@ -21,6 +21,16 @@ One paragraph: the thing, and the idea behind it.
 
 ## The moments that mattered
 
+Key commits so far:
+
+- Hero cursor lens (tracking, SVG `feDisplacementMap`-based distortion that
+  follows the pointer):
+  [`7a1bc23`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/7a1bc231277cbcf667d2df57fcfda51dbfcdc86e)
+- Hero "Discover more" CTA button:
+  [`a07cd94`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/a07cd943fcb7663ee18eb6e917decf703b7c6893)
+- Three-act bird's-eye camera path for the volcano scene:
+  [`344ea58`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-soybeaam/commit/344ea58fa68de606983a1d238ecf91d03d93708f)
+
 Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
 list short so each moment has room to do all four jobs:
 
