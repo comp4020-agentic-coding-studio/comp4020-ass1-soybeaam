@@ -567,6 +567,90 @@ main > section h2 {
 }
 
 /* ------------------------------------------------------------
+   Eruption loop (ambient canvas widget closing #process)
+   ------------------------------------------------------------ */
+
+/* Companion piece to the #underground-process VEI / Eruption-Style widgets
+   (.vei-app/.vei-stage and .es-app/.es-stage, styled inline in index.html's
+   <head> since those are pasted-whole third-party widgets) — same dark
+   void/sky-gradient stage and monospace overlay-chip visual language, but
+   this one's a small standalone canvas so its rules live here instead.
+   Palette scoped to .eruption-loop itself rather than :root so it can't
+   leak into the rest of the page, same rationale as the inline widgets. */
+.eruption-loop {
+  margin-top: 3rem;
+
+  --loop-void: #0b0e13;
+  --loop-sky-top: #1c2733;
+  --loop-sky-mid: #3a4a5c;
+}
+
+.eruption-loop-stage {
+  position: relative;
+  min-height: 22rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--loop-sky-top) 0%, var(--loop-sky-mid) 60%, #566b7d 100%);
+}
+
+@media (width <= 640px) {
+  .eruption-loop-stage {
+    min-height: 16rem;
+  }
+}
+
+.eruption-loop-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.eruption-loop-caption {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.875rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--loop-void) 55%, transparent);
+  font-family: ui-monospace, SFMono-Regular, menlo, consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+.eruption-loop-replay {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.875rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--loop-void) 55%, transparent);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, menlo, consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.eruption-loop-replay:hover {
+  background: color-mix(in srgb, var(--loop-void) 80%, transparent);
+  border-color: var(--color-lava);
+  color: var(--color-lava);
+}
+
+.eruption-loop-replay:focus-visible {
+  outline: 2px solid var(--color-lava);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
    Hero (ID-scoped layout)
    ------------------------------------------------------------ */
 
